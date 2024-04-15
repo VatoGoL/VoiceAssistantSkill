@@ -1,4 +1,4 @@
-#include "SSLSertificate.h"
+#include "SSLSertificate.hpp"
 
 void load_server_certificate(boost::asio::ssl::context& ctx, std::string path_to_sertificate, std::string path_to_key)
 {

@@ -1,2 +1,2 @@
 link_directories(PRIVATE ../)
-add_subdirectory("MainServer")
+add_subdirectory("Worker")

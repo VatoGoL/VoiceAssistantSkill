@@ -8,7 +8,6 @@
 #include <boost/asio/strand.hpp>
 #include <boost/config.hpp>
 #include <boost/json.hpp>
-//#include <boost/locale.hpp>
 #include <exception>
 #include <algorithm>
 #include <cstdlib>
@@ -19,8 +18,8 @@
 #include <thread>
 #include <vector>
 #include <string>
-#include "../WorkerServer/WorkerServer.hpp"
-#include "../SSLSertificate/Sertificate.hpp"
+#include "../Worker/Worker.hpp"
+#include "../SSLSertificate/SSLSertificate.hpp"
 
 namespace https_server {
 

@@ -1,4 +1,4 @@
-link_directories(PRIVATE ../../../../../)
+link_directories(PRIVATE ../)
 add_library(SSLSertificate STATIC SSLSertificate.cpp)
 
 target_include_directories(SSLSertificate PUBLIC ${Boost_INCLUDE_DIRS})

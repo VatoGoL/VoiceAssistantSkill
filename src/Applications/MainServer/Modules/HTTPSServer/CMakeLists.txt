@@ -1,4 +1,4 @@
-link_directories(PRIVATE ../../../../../)
+link_directories(PRIVATE ../)
 add_library(HTTPSServer STATIC HTTPSServer.cpp)
 
 target_include_directories(HTTPSServer PUBLIC ${Boost_INCLUDE_DIRS})
@@ -6,8 +6,7 @@ target_include_directories(HTTPSServer PUBLIC ${OPENSSL_INCLUDE_DIR})
 target_include_directories(HTTPSServer PUBLIC ${ZLIB_INCLUDE_DIRS})
 
 find_package(OpenSSL COMPONENTS SSL Crypto REQUIRED) 
-find_package(Boost COMPONENTS thread chrono atomic locale REQUIRED)
-find_package(Boost COMPONENTS json REQUIRED)
+find_package(Boost COMPONENTS json thread chrono atomic locale REQUIRED)
 find_package(ZLIB COMPONENTS ZLIB REQUIRED)
 
 target_link_libraries(HTTPSServer PUBLIC OpenSSL::SSL) 

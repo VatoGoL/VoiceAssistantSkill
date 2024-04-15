@@ -24,5 +24,7 @@ set(Boost_USE_DYNAMIC_LIBS        OFF)
 find_package(Boost REQUIRED) 
 find_package(OpenSSL REQUIRED)
  
+set(GlobalModules_ROOT_DIR "./src/lib")
+
 project(VoiceAssistantSkill)
 add_subdirectory("src")

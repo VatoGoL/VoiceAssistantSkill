@@ -1,0 +1,5 @@
+link_directories(PRIVATE ../)
+add_subdirectory("ClientDB")
+add_subdirectory("Configer")
+add_subdirectory("Logger")
+add_subdirectory("JSONFormatter")
