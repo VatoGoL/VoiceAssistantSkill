@@ -2,13 +2,13 @@
 
 ClientDB::ClientDB( std::string ip_dB, std::string port_dB, 
                     std::string worker_log, std::string worker_pass, 
-                    std::string name_sender, std::shared_ptr<tcp::socket> socket, callback_t callback)
+                    std::string name_sender, std::shared_ptr<tcp::socket> socket, ClientDB::callback_t callback)
 {
     __callback_f = callback;
     __end_point = std::make_shared<tcp::endpoint>(tcp::endpoint(net::ip::address::from_string(ip_dB), stoi(port_dB)));
     __socket = socket;
     __buf_recive = new char[BUF_RECIVE_SIZE + 1];
-    fill_n(__buf_recive, BUF_RECIVE_SIZE, 0);
+    std::fill_n(__buf_recive, BUF_RECIVE_SIZE, 0);
     __buf_json_recive = {};
     __parser.reset();
     __worker_login = worker_log;
@@ -19,7 +19,7 @@ ClientDB::ClientDB( std::string ip_dB, std::string port_dB,
 }
 ClientDB::~ClientDB()
 {
-    cerr << "~ClientDB()" << endl;
+    
     this->stop();
     delete[] __buf_recive;
 }
@@ -98,8 +98,8 @@ void ClientDB::__checkConnect(const boost::system::error_code& error_code)
     {
         if (__flag_disconnect == true)
         {
-            cerr << "no connect" << endl;
-            cerr << "__checkConnect" << endl;
+            std::cerr << "no connect" << std::endl;
+            std::cerr << "__checkConnect" << std::endl;
             this->stop();
         }
         else
@@ -182,7 +182,7 @@ void ClientDB::__sendCommand(const boost::system::error_code& error_code, size_t
     __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&ClientDB::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
 }
 
-void CleintDB::__reciveCommand(const boost::system::error_code& error_code, size_t bytes_recive)
+void ClientDB::__reciveCommand(const boost::system::error_code& error_code, size_t bytes_recive)
 {
     if (error_code)
     {
@@ -222,7 +222,7 @@ void CleintDB::__reciveCommand(const boost::system::error_code& error_code, size
     }
     __commandAnalize(error_code);
 }
-void Cliet_DB::__commandAnalize(const boost::system::error_code& error_code)
+void ClientDB::__commandAnalize(const boost::system::error_code& error_code)
 {
     boost::json::value target = __buf_json_recive.at("target");
     //cerr << __buf_json_recive << endl;

@@ -16,6 +16,6 @@ int main(int argc, char* argv[])
             config_file_name = argv[++i];
         }
     }
-	ServerWorker sW(config_file_way, config_file_name);
+	MarusiaWorker sW(config_file_way, config_file_name);
 	sW.run();
 }

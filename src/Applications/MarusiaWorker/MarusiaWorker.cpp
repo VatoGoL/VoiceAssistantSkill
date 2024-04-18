@@ -1,6 +1,6 @@
 #include "MarusiaWorker.hpp"
 
-MarusiaWorker::MarusiaWorker(string way_conf_file, string name_conf_file)
+MarusiaWorker::MarusiaWorker(std::string way_conf_file, std::string name_conf_file)
 {
     __log_server = std::make_shared<Logger>("Log/", "./", "Marussia_Worker");
     std::string way = "";
@@ -54,8 +54,8 @@ void MarusiaWorker::run()
     {
         std::cerr << e.what() << std::endl;
     }
-    __ioc = make_shared<boost::asio::io_context>(__count_threads);
-    __session = make_shared<Worker>(__config_info, *__ioc, __log_server);
+    __ioc = std::make_shared<boost::asio::io_context>(__count_threads);
+    __session = std::make_shared<WorkerM>(__config_info, *__ioc, __log_server);
     __session->start();
     std::vector<std::thread> v;
     v.reserve(__count_threads - 1);

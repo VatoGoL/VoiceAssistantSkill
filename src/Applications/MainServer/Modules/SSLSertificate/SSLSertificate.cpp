@@ -1,6 +1,6 @@
 #include "SSLSertificate.hpp"
 
-void load_server_certificate(boost::asio::ssl::context& ctx, std::string path_to_sertificate, std::string path_to_key)
+int load_server_certificate(boost::asio::ssl::context& ctx, std::string path_to_sertificate, std::string path_to_key)
 {
     ctx.set_password_callback(
         [](std::size_t,
@@ -15,4 +15,5 @@ void load_server_certificate(boost::asio::ssl::context& ctx, std::string path_to
 
     ctx.use_certificate_chain_file(path_to_sertificate);
     ctx.use_private_key_file(path_to_key, boost::asio::ssl::context::file_format::pem);
+    return 1;
 }

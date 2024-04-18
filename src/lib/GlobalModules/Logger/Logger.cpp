@@ -85,10 +85,7 @@ bool Logger::__checkFile()
 		return true;
 		fin.close();
 	}
-	else
-	{
-		return false;
-	}
+	return false;
 }
 
 std::streamsize Logger::getFileSize()
@@ -110,7 +107,7 @@ void Logger::writeTempLog(int error, std::string clas, std::string message)
 	std::string buffLog = "(" + __date + ")_" + clas + "_" + "\"" + message + "\"";
 	if (error != 0)
 	{
-		buffLog = buffLog + "_" + to_string(error);
+		buffLog = buffLog + "_" + std::to_string(error);
 	}
 	switch (__num_massive)
 	{

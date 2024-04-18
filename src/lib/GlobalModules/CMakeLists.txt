@@ -1,4 +1,4 @@
-link_directories(PRIVATE ../)
+link_directories(PUBLIC ../)
 add_subdirectory("ClientDB")
 add_subdirectory("Configer")
 add_subdirectory("Logger")

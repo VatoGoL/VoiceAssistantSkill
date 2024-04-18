@@ -1,2 +1,2 @@
-link_directories(PRIVATE ../)
+link_directories(PUBLIC ../)
 add_subdirectory("GlobalModules")

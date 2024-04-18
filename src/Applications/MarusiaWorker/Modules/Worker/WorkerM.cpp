@@ -1,12 +1,12 @@
-#include "Worker.hpp"
+#include "WorkerM.hpp"
 
-void Worker::__сallback(std::map<std::string, std::map<std::string, std::vector<std::string>>> data)
+void WorkerM::__сallback(std::map<std::string, std::map<std::string, std::vector<std::string>>> data)
 {
     setDbInfo(data);
 }
-Worker::Worker( std::map<std::string, std::string> conf_info, net::io_context& ioc, std::shared_ptr<Logger> lg):
+WorkerM::WorkerM( std::map<std::string, std::string> conf_info, net::io_context& ioc, std::shared_ptr<Logger> lg):
                 __ioc(ioc),
-                callback(boost::bind(&Worker::__сallback, this, boost::placeholders::_1))
+                callback(boost::bind(&WorkerM::__сallback, this, boost::placeholders::_1))
 {
     __socket = std::make_shared<tcp::socket>(__ioc);
     __buf_recive = new char[BUF_RECIVE_SIZE + 1];
@@ -18,17 +18,17 @@ Worker::Worker( std::map<std::string, std::string> conf_info, net::io_context& i
     __log = lg;
     __flag_disconnect = false;
 }
-Worker::~Worker()
+WorkerM::~WorkerM()
 {
     this->stop();
     delete[] __buf_recive;
 }
-void Worker::start()
+void WorkerM::start()
 {
     __log->writeLog(0, __name, "start_server");
     __log->writeTempLog(0, __name, "start_server");
     __timer->expires_from_now(boost::posix_time::hours(24));
-    __timer->async_wait(boost::bind(&Worker::__resetTimer, shared_from_this()));
+    __timer->async_wait(boost::bind(&WorkerM::__resetTimer, shared_from_this()));
     try
     {
     __ip_ms = __config_info.at("Main_server_ip");
@@ -54,7 +54,7 @@ void Worker::start()
     __connectToBd();
     __connectToMS();
 }
-void Worker::stop()
+void WorkerM::stop()
 {
     try
     {
@@ -70,21 +70,21 @@ void Worker::stop()
         std::cerr << "worker Marussia " << e.what() << std::endl;
     }
 }
-void Worker::setDbInfo(std::map <std::string, std::map<std::string, std::vector<std::string>>> data)
+void WorkerM::setDbInfo(std::map <std::string, std::map<std::string, std::vector<std::string>>> data)
 {
     __db_info = data;
 }
-void Worker::__connectToMS()
+void WorkerM::__connectToMS()
 {
-    __socket->async_connect(*__end_point, boost::bind(&Worker::__sendConnect, this, boost::placeholders::_1));
+    __socket->async_connect(*__end_point, boost::bind(&WorkerM::__sendConnect, this, boost::placeholders::_1));
 }
-void Worker::__sendConnect(const boost::system::error_code& eC)
+void WorkerM::__sendConnect(const boost::system::error_code& eC)
 {
     if (eC)
     {
         __log->writeLog(3, __name, "Error_failed_to_connect");
         __log->writeTempLog(3, __name, "Error_failed_to_connect");
-        cerr << "connect" << eC.message() << endl;
+        std::cerr << "connect" << eC.message() << std::endl;
         #ifndef UNIX
             sleep(2);
         #else
@@ -98,15 +98,15 @@ void Worker::__sendConnect(const boost::system::error_code& eC)
 
     __buf_send.clear();
     __buf_send = boost::json::serialize(json_formatter::worker::request::connect(__name, __worker_id));
-    __socket->async_send(net::buffer(__buf_send, __buf_send.size()), boost::bind(&Worker::__reciveConnect, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+    __socket->async_send(net::buffer(__buf_send, __buf_send.size()), boost::bind(&WorkerM::__reciveConnect, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
 }
-void Worker::__reciveConnect(const boost::system::error_code& eC, size_t bytes_send)
+void WorkerM::__reciveConnect(const boost::system::error_code& eC, size_t bytes_send)
 {
     if (eC)
     {
         std::cerr << eC.message() << std::endl;
         std::cerr << "reciveConnect" << std::endl;
-        __socket->async_send(net::buffer(__buf_send, __buf_send.size()), boost::bind(&Worker::__reciveConnect, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+        __socket->async_send(net::buffer(__buf_send, __buf_send.size()), boost::bind(&WorkerM::__reciveConnect, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
         return;
     }
     static size_t temp_send = 0;
@@ -114,22 +114,22 @@ void Worker::__reciveConnect(const boost::system::error_code& eC, size_t bytes_s
     if (temp_send != __buf_send.size())
     {
         __log->writeTempLog(0, "DataBase", "Not_full_json");
-        __socket->async_send(net::buffer(__buf_send.c_str() + temp_send, __buf_send.size() - temp_send), boost::bind(&Worker::__reciveConnect, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+        __socket->async_send(net::buffer(__buf_send.c_str() + temp_send, __buf_send.size() - temp_send), boost::bind(&WorkerM::__reciveConnect, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
         return;
     }
     temp_send = 0;
     //cerr << __buf_send << endl;
     __buf_send.clear();
-    __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&Worker::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+    __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&WorkerM::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
 }
-void Worker::__reciveCommand(const boost::system::error_code& eC, size_t bytes_recive)
+void WorkerM::__reciveCommand(const boost::system::error_code& eC, size_t bytes_recive)
 {
     if (eC)
     {
         std::cerr << "reciveCommand " << eC.message() << std::endl;
         this->stop();
         this->__connectToMS();
-        //__socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&Worker::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+        //__socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&WorkerM::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
         return;
     }
 
@@ -148,7 +148,7 @@ void Worker::__reciveCommand(const boost::system::error_code& eC, size_t bytes_r
         {
             std::fill_n(__buf_recive, BUF_RECIVE_SIZE, 0);
             std::cerr << "Json is not full" << std::endl;
-            __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&Worker::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+            __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&WorkerM::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
             return;
         }
         try
@@ -162,15 +162,15 @@ void Worker::__reciveCommand(const boost::system::error_code& eC, size_t bytes_r
             __parser.reset();
             __buf_json_recive = {};
             std::cerr << "Json read " << e.what() << std::endl;
-            __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&Worker::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+            __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&WorkerM::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
             return;
         }
     }
     std::fill_n(__buf_recive, BUF_RECIVE_SIZE, 0);
     __buf_json_recive = {};
-    __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&Worker::__sendResponse, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+    __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&WorkerM::__sendResponse, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
 }
-void Worker::__sendResponse(const boost::system::error_code& eC, size_t bytes_recive)
+void WorkerM::__sendResponse(const boost::system::error_code& eC, size_t bytes_recive)
 {
     if (eC)
     {
@@ -182,7 +182,7 @@ void Worker::__sendResponse(const boost::system::error_code& eC, size_t bytes_re
             Sleep(2000);
         #endif
         this->__connectToMS();
-        //__socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&Worker::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+        //__socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&WorkerM::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
         return;
     }
 
@@ -201,7 +201,7 @@ void Worker::__sendResponse(const boost::system::error_code& eC, size_t bytes_re
         {
             std::fill_n(__buf_recive, BUF_RECIVE_SIZE, 0);
             std::cerr << "Json is not full" << std::endl;
-            __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&Worker::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+            __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&WorkerM::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
             return;
         }
         try
@@ -215,7 +215,7 @@ void Worker::__sendResponse(const boost::system::error_code& eC, size_t bytes_re
             __parser.reset();
             __buf_json_recive = {};
             std::cerr << "Json read " << e.what() << std::endl;
-            __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&Worker::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+            __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&WorkerM::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
             return;
         }
     }
@@ -248,22 +248,22 @@ void Worker::__sendResponse(const boost::system::error_code& eC, size_t bytes_re
             {
                 __flag_end_send = true;
             }
-            __socket->async_send(net::buffer(__buf_send, __buf_send.size()), boost::bind(&Worker::__reciveAnswer, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+            __socket->async_send(net::buffer(__buf_send, __buf_send.size()), boost::bind(&WorkerM::__reciveAnswer, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
 
         }
         catch (std::exception& e)
         {
             std::cerr << e.what() << std::endl;
-            __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&Worker::__sendResponse, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+            __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&WorkerM::__sendResponse, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
         }
     }
 }
-void Worker::__reciveAnswer(const boost::system::error_code& eC, size_t bytes_send)
+void WorkerM::__reciveAnswer(const boost::system::error_code& eC, size_t bytes_send)
 {
     if (eC)
     {
         std::cerr << "recieveCommand " << eC.message() << std::endl;
-        __socket->async_send(net::buffer(__buf_send, __buf_send.size()), boost::bind(&Worker::__reciveAnswer, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+        __socket->async_send(net::buffer(__buf_send, __buf_send.size()), boost::bind(&WorkerM::__reciveAnswer, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
         return;
     }
     static size_t temp_send = 0;
@@ -271,7 +271,7 @@ void Worker::__reciveAnswer(const boost::system::error_code& eC, size_t bytes_se
     if (temp_send != __buf_send.size())
     {
         __log->writeTempLog(0, "DataBase", "Not_full_json");
-        __socket->async_send(net::buffer(__buf_send.c_str() + temp_send, __buf_send.size() - temp_send), boost::bind(&Worker::__reciveAnswer, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+        __socket->async_send(net::buffer(__buf_send.c_str() + temp_send, __buf_send.size() - temp_send), boost::bind(&WorkerM::__reciveAnswer, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
         return;
     }
     temp_send = 0;
@@ -284,14 +284,14 @@ void Worker::__reciveAnswer(const boost::system::error_code& eC, size_t bytes_se
     else if (__flag_end_send)
     {
         __flag_end_send = false;
-        __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&Worker::__sendResponse, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
+        __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&WorkerM::__sendResponse, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
     }
     else
     {
         std::cerr << "no one send " << std::endl;
     }
 }
-void Worker::__connectToBd()
+void WorkerM::__connectToBd()
 {
     std::queue<std::string> tables;
     tables.push("MarussiaStation"); tables.push("House"); tables.push("StaticPhrases");
@@ -303,20 +303,20 @@ void Worker::__connectToBd()
 
     std::queue<std::string> conditions;
     //conditions.push("WHERE WorkerId = \"1\" OR WokerSecId = \"1\""); conditions.push(""); conditions.push("");
-    std::cout << __db_log << " " << __db_pas << endl;
-    std::cout << __ip_db << " " << __port_db << endl;
+    std::cout << __db_log << " " << __db_pas << std::endl;
+    std::cout << __ip_db << " " << __port_db << std::endl;
     __db_client->setQuerys(tables, fields, conditions);
     __db_client->start();
 }
-void Worker::__resetTimer()
+void WorkerM::__resetTimer()
 {
     __log->writeTempLog(0, __name, "__rewrite_data_base");
     __connectToBd();
     __timer->expires_from_now(boost::posix_time::hours(24));
-    __timer->async_wait(boost::bind(&Worker::__resetTimer, shared_from_this()));
+    __timer->async_wait(boost::bind(&WorkerM::__resetTimer, shared_from_this()));
 }
 
-void Worker::__analizeRequest()
+void WorkerM::__analizeRequest()
 {
     __log->writeTempLog(0, __name, "__analize_response");
     ///___marussia station House number and complex id___///
@@ -496,7 +496,7 @@ void Worker::__analizeRequest()
                 std::string buf_variant;
                 remove_copy(vector_variants[j].begin(), vector_variants[j].end(), back_inserter(buf_variant), '"');
                 std::cerr << command << " " << buf_variant << std::endl;
-                if (command.find(buf_variant)!= string::npos)
+                if (command.find(buf_variant)!= std::string::npos)
                 {
                     std::cerr << command << " " << buf_variant << std::endl;
                     if (num_house == house_vec[i] && comp_id == comp_vec[i])
@@ -531,7 +531,7 @@ void Worker::__analizeRequest()
     }
 
 }
-boost::json::object Worker::__getRespToMS(string respText)
+boost::json::object WorkerM::__getRespToMS(std::string respText)
 {
     return boost::json::object({
                                 {"text", respText},

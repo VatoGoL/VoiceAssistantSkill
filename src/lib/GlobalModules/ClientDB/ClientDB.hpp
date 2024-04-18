@@ -27,7 +27,7 @@ namespace http = beast::http;
 namespace net = boost::asio;
 using tcp = boost::asio::ip::tcp;
 
-class ClientDB : public enable_shared_from_this<ClientDB>
+class ClientDB : public std::enable_shared_from_this<ClientDB>
 {
 public:
 	

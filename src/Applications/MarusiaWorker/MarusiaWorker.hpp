@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Modules/Worker/Worker.hpp"
+#include "Modules/Worker/WorkerM.hpp"
 #define DEFINE_CONFIG "config.txt"
 
 class MarusiaWorker : public std::enable_shared_from_this<MarusiaWorker>
 {
 public:
-	MarusiaWorker(string way_conf_file, string name_conf_file);
+	MarusiaWorker(std::string way_conf_file, std::string name_conf_file);
 	void run();
 	void stop();
 	~MarusiaWorker();
@@ -19,6 +19,6 @@ private:
 	std::vector<std::string> CONFIG_FIELDS = { "Id", "Main_server_ip", "Main_server_port", "BD_ip", "BD_port", "BD_login", "BD_password", "Count_threads"};
 	int __count_threads;
 	std::shared_ptr<net::io_context> __ioc;
-	std::shared_ptr<std::Worker> __session;
+	std::shared_ptr<WorkerM> __session;
 	std::string name_config;
 };

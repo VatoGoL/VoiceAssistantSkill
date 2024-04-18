@@ -24,7 +24,7 @@ set(Boost_USE_DYNAMIC_LIBS        OFF)
 find_package(Boost REQUIRED) 
 find_package(OpenSSL REQUIRED)
  
-set(GlobalModules_ROOT_DIR "./src/lib")
+set(GlobalModules_ROOT_DIR "/media/vato/6c438f7c-3d6e-47b1-8c02-ca9aa1dc9ba2/vato/Vato/Diplom/VoiceAssistantSkill/src/lib")
 
 project(VoiceAssistantSkill)
 add_subdirectory("src")

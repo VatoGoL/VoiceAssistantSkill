@@ -12,7 +12,6 @@
 #include <GlobalModules/Configer/Configer.hpp>
 #include "Modules/HTTPSServer/HTTPSServer.hpp"
 #include "Modules/SSLSertificate/SSLSertificate.hpp"
-//#include "../GlobalModules/ClientDB/ClientDB.hpp"
 #include <GlobalModules/ClientDB/ClientDB.hpp>
 //using namespace std;
 
@@ -36,8 +35,8 @@ private:
  	short __count_threads;
 
 	std::map<std::string, std::string> __configuration;
-	std::shared_ptr<Log> __logger;
-	std::shared_ptr<Config> __configer;
+	std::shared_ptr<Logger> __logger;
+	std::shared_ptr<Configer> __configer;
 
 	std::shared_ptr<std::map<std::string, std::vector<std::string>>> __sp_db_worker_marusia;
 	std::shared_ptr<std::map<std::string, std::vector<std::string>>> __sp_db_worker_lu;

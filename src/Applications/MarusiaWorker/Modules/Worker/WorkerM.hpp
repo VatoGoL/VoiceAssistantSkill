@@ -31,7 +31,7 @@ namespace net = boost::asio;
 using tcp = boost::asio::ip::tcp;
 
 
-class Worker : public std::enable_shared_from_this<Worker>
+class WorkerM : public std::enable_shared_from_this<WorkerM>
 {
 public:
 	typedef std::function<void(std::map<std::string, std::map<std::string, std::vector<std::string>>> )> _callback_t;
@@ -39,9 +39,8 @@ public:
 
 	void __сallback(std::map<std::string, std::map<std::string, std::vector<std::string>>> data);
 
-	Worker(std::map<std::string, std::string> conf_info, net::io_context& ioc, std::shared_ptr<Logger> lg) :__ioc(ioc),
-		callback(boost::bind(&Worker::__сallback, this, boost::placeholders::_1));
-	~Worker();
+	WorkerM(std::map<std::string, std::string> conf_info, net::io_context& ioc, std::shared_ptr<Logger> lg);
+	~WorkerM();
 	void start();
 	void stop();
 	void setDbInfo(std::map <std::string, std::map<std::string, std::vector<std::string>>> data);
@@ -108,14 +107,7 @@ private:
 	void __resetTimer();
 
 	void __analizeRequest();
-	boost::json::object __getRespToMS(string respText)
-	{
-		return boost::json::object({
-									{"text", respText},
-									{"tts", respText},
-									{"end_session", false}
-									});
-	}
+	boost::json::object __getRespToMS(std::string respText);
 
 
 	enum __CHECK_STATUS

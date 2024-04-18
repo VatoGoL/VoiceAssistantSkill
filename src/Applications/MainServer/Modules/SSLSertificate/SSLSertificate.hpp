@@ -6,4 +6,4 @@
 #include <fstream>
 #include <string>
 
-void load_server_certificate(boost::asio::ssl::context& ctx, std::string path_to_sertificate, std::string path_to_key);
+int load_server_certificate(boost::asio::ssl::context& ctx, std::string path_to_sertificate, std::string path_to_key);

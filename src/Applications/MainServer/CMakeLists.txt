@@ -1,4 +1,4 @@
-link_directories(PRIVATE ../)
+link_directories(PUBLIC ../)
 add_subdirectory("Modules")
 
 add_executable(appMainServer "main.cpp")
@@ -9,6 +9,7 @@ target_include_directories(MainServer PUBLIC ${Boost_INCLUDE_DIRS})
 target_include_directories(MainServer PUBLIC ${OPENSSL_INCLUDE_DIR})
 target_include_directories(MainServer PUBLIC ${ZLIB_INCLUDE_DIRS})
 target_include_directories(MainServer PUBLIC ${GlobalModules_ROOT_DIR})
+#target_link_directories(MainServer PUBLIC  ${GlobalModules_ROOT_DIR})
 
 find_package(Boost COMPONENTS json thread chrono atomic locale REQUIRED)
 find_package(OpenSSL COMPONENTS Crypto REQUIRED)
@@ -23,4 +24,6 @@ target_link_libraries(MainServer PUBLIC OpenSSL::Crypto)
 
 target_link_libraries(MainServer PRIVATE HTTPSServer)
 target_link_libraries(MainServer PRIVATE SSLSertificate)
+target_link_libraries(MainServer PRIVATE Logger)
+target_link_libraries(MainServer PRIVATE Configer)
 target_link_libraries(appMainServer PRIVATE MainServer)

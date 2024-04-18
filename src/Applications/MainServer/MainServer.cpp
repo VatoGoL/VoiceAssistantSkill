@@ -6,10 +6,10 @@ MainServer::~MainServer() {
 }
 MainServer::PROCESS_CODE MainServer::init(std::string path_to_config_file) {
 
-	__logger = make_shared<Log>("","./","MainServer");
-	__configer = make_shared<Config>(__logger, "./", path_to_config_file);
+	__logger = std::make_shared<Logger>("","./","MainServer");
+	__configer = std::make_shared<Configer>(__logger, "./", path_to_config_file);
 	__configer->readConfig();
-	__ssl_ctx = make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::tlsv12);
+	__ssl_ctx = std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::tlsv12);
 
 	std::map<std::string, std::string> configuration = __configer->getConfigInfo();
 	try {
@@ -44,10 +44,10 @@ MainServer::PROCESS_CODE MainServer::init(std::string path_to_config_file) {
 	__io_ctx = std::make_shared<boost::asio::io_context>(__count_threads);
 	
 	
-	__server_w_mqtt = std::make_shared<worker_server::Server>(__io_ctx, __port_worker_mqtt_info,worker_server::WORKER_MQTT_T);
+	//__server_w_mqtt = std::make_shared<worker_server::Server>(__io_ctx, __port_worker_mqtt_info,worker_server::WORKER_MQTT_T);
 	__server_w_marusia = std::make_shared<worker_server::Server>(__io_ctx, __port_worker_marusia, worker_server::WORKER_MARUSIA_T);
 	__server_https = std::make_shared<https_server::Listener>(*__io_ctx, *__ssl_ctx,configuration.at("Path_to_ssl_sertificate"),configuration.at("Path_to_ssl_key"),__port_marusia_station, __server_w_mqtt->getSessions(), __server_w_marusia->getSessions());
-	__client_db = std::make_shared<ClientDB>(__db_ip, to_string(__port_db), __db_login, __db_password, 
+	__client_db = std::make_shared<ClientDB>(__db_ip, std::to_string(__port_db), __db_login, __db_password, 
 										"Main_server", std::make_shared<boost::asio::ip::tcp::socket>(*__io_ctx), 
 										bind(&MainServer::__updateDataCallback, this,_1));
 		

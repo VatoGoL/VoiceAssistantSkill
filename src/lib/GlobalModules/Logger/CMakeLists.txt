@@ -1,4 +1,4 @@
-link_directories(PRIVATE ../)
+link_directories(PUBLIC ../)
 
 add_library(Logger STATIC "Logger.cpp")
 

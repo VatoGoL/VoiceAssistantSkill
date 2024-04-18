@@ -16,8 +16,8 @@ Session::Session(tcp::socket&& socket,
     std::string path_to_ssl_key,
     std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_mqtt,
     std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_marussia,
-    std::shared_ptr< shared_ptr<map<string, vector<string>>>> sp_db_marusia_station,
-    std::shared_ptr< shared_ptr<map<string, vector<string>>>> sp_db_lift_blocks): __stream(std::move(socket), ssl_ctx), __ssl_ctx(ssl_ctx)
+    std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_marusia_station,
+    std::shared_ptr< std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_lift_blocks): __stream(std::move(socket), ssl_ctx), __ssl_ctx(ssl_ctx)
 {
     __sp_db_marusia_station = sp_db_marusia_station;
     __sp_db_lift_blocks = sp_db_lift_blocks;
@@ -30,17 +30,17 @@ Session::Session(tcp::socket&& socket,
 }
 Session::~Session(){
     
-    cout << "KILL HTTPS SESSION" << endl;
+    std::cout << "KILL HTTPS SESSION" << std::endl;
 }
 
 void Session::run() {
 
-    cout << "METHOD RUN" << endl;
+    std::cout << "METHOD RUN" << std::endl;
     net::dispatch( __stream.get_executor(), 
                     beast::bind_front_handler( &Session::__onRun, shared_from_this() ));
 }
 void Session::__onRun() {
-    cout << "METHOD OnRUN" << endl;
+    std::cout << "METHOD OnRUN" << std::endl;
     // Set the timeout.
     beast::get_lowest_layer(__stream).expires_after(std::chrono::seconds(30));
     // Perform the SSL handshake
@@ -49,7 +49,7 @@ void Session::__onRun() {
 }
 void Session::__onHandshake(beast::error_code ec) {
     /*тут нужно добавить перечтение ssl сертификата*/
-    cout << "METHOD Handshake" << endl;
+    std::cout << "METHOD Handshake" << std::endl;
     if (ec) { 
 
         if(load_server_certificate(__ssl_ctx,__path_to_ssl_certificate, __path_to_ssl_key) == -1){
@@ -69,7 +69,7 @@ void Session::__onHandshake(beast::error_code ec) {
     __doRead();
 }
 void Session::__doRead() {
-    cout << "METHOD doRead" << endl;
+    std::cout << "METHOD doRead" << std::endl;
     __req = {};
 
     // Set the timeout.
@@ -81,7 +81,7 @@ void Session::__doRead() {
 }
 void Session::__onRead(beast::error_code ec, std::size_t bytes_transferred) 
 {
-    cout << "METHOD onRead" << endl;
+    std::cout << "METHOD onRead" << std::endl;
     boost::ignore_unused(bytes_transferred);
 
     // This means they closed the connection
@@ -198,14 +198,14 @@ void Session::__analizeRequest()
     __body_request = __parser.release();
 
     if (__sessions_marusia->size() == 0) {
-        cerr << "__session_marussia size = 0" << endl;
+        std::cerr << "__session_marussia size = 0" << std::endl;
         __callbackWorkerMarussia({});
         return;
     }
     try {
         bool search_successful = false;
         
-        string application_id = "\"" + string(__body_request.at("session").at("application").at("application_id").as_string().c_str()) + "\"";
+        std::string application_id = "\"" + std::string(__body_request.at("session").at("application").at("application_id").as_string().c_str()) + "\"";
         if ((*__sp_db_marusia_station)->at("ApplicationId")[__pos_ms_field] != application_id) {
             __pos_ms_field = 0;
             for (auto i = (*__sp_db_marusia_station)->at("ApplicationId").begin(), end = (*__sp_db_marusia_station)->at("ApplicationId").end(); i != end; i++) {
@@ -219,25 +219,25 @@ void Session::__analizeRequest()
         else { search_successful = true; }
         
         if (!search_successful) {
-            throw invalid_argument(string("application id not found: " + application_id).c_str());
+            throw std::invalid_argument(std::string("application id not found: " + application_id).c_str());
         }
         /*-----------------------------------------*/
         search_successful = false;
 
-        string worker_id = (*__sp_db_marusia_station)->at("WorkerId").at(__pos_ms_field);
-        string second_worker_id = (*__sp_db_marusia_station)->at("SecondWorkerId").at(__pos_ms_field);
+        std::string worker_id = (*__sp_db_marusia_station)->at("WorkerId").at(__pos_ms_field);
+        std::string second_worker_id = (*__sp_db_marusia_station)->at("SecondWorkerId").at(__pos_ms_field);
         
-        string temp_var;
+        std::string temp_var;
         try {
             temp_var = __sessions_marusia->at(__pos_worker_marusia)->getId();
             if (temp_var == worker_id || temp_var == second_worker_id) {
                 search_successful = true;
             }
             else {
-                throw invalid_argument("");
+                throw std::invalid_argument("");
             }
         }
-        catch (exception& e) {
+        catch (std::exception& e) {
             temp_var = "";
             __pos_worker_marusia = 0;
             for (auto i = __sessions_marusia->begin(), end = __sessions_marusia->end(); i != end; i++) {
@@ -259,7 +259,7 @@ void Session::__analizeRequest()
         /*-----------------------------------------*/
 
         search_successful = false;
-        string lb_id = (*__sp_db_marusia_station)->at("LiftBlockId")[__pos_ms_field];
+        std::string lb_id = (*__sp_db_marusia_station)->at("LiftBlockId")[__pos_ms_field];
 
         if ((*__sp_db_lift_blocks)->at("Id")[__pos_lb_field] != lb_id) {
             __pos_lb_field = 0;
@@ -282,11 +282,11 @@ void Session::__analizeRequest()
                 search_successful = true;
             }
             else {
-                throw invalid_argument("");
+                throw std::invalid_argument("");
                 //throw exception("");
             }
         }
-        catch (exception& e) {
+        catch (std::exception& e) {
             temp_var = "";
             __pos_worker_lu = 0;
             for (auto i = __sessions_mqtt->begin(), end = __sessions_mqtt->end(); i != end; i++) {
@@ -311,8 +311,8 @@ void Session::__analizeRequest()
         __sessions_marusia->at(__pos_worker_marusia)->startCommand(worker_server::Session::COMMAND_CODE_MARUSIA::MARUSIA_STATION_REQUEST, (void*)&__request_marusia,
             boost::bind(&Session::__callbackWorkerMarussia, this, _1));
     }
-    catch (exception& e) {
-        cerr << "__analizeRequest: " << e.what() << endl;
+    catch (std::exception& e) {
+        std::cerr << "__analizeRequest: " << e.what() << std::endl;
         __callbackWorkerMarussia({{"target", "application_not_found"}});
     }
     
@@ -331,13 +331,13 @@ http::message_generator Session::__badRequest(beast::string_view why) {
 void Session::__callbackWorkerMarussia(boost::json::value data) {
     boost:json::value target;
     boost::json::object response_data = {};
-    __request_mqtt = {};
+    //__request_mqtt = {};
 
     try {
         target = data.at("target");
     }
-    catch (exception& e) {
-        cout << "__callbackWorkerMarussia [target]: " << e.what();
+    catch (std::exception& e) {
+        std::cout << "__callbackWorkerMarussia [target]: " << e.what();
         target = "error";
     };
     /*------------*/
@@ -347,23 +347,23 @@ void Session::__callbackWorkerMarussia(boost::json::value data) {
         }
         else if (target == "move_lift") {
             if (__sessions_mqtt->size() == 0) {
-                throw invalid_argument("session mqtt size = 0");
+                throw std::invalid_argument("session mqtt size = 0");
             }
-            __request_mqtt.station_id = data.at("response").at("station_id").as_string();
-            __request_mqtt.floor = stoi(data.at("response").at("mqtt_command").at("value").as_string().c_str());
+            /*__request_mqtt.station_id = data.at("response").at("station_id").as_string();
+            __request_mqtt.floor = std::stoi(data.at("response").at("mqtt_command").at("value").as_string().c_str());
             __request_mqtt.lift_block_id = data.at("response").at("mqtt_command").at("lb_id").as_string();
 
             __sessions_mqtt->at(__pos_worker_lu)->startCommand(worker_server::Session::COMMAND_CODE_MQTT::MOVE_LIFT, (void*)&(__request_mqtt),
                 boost::bind(&Session::__callbackWorkerMQTT, this, _1));
-            return;
+            return;*/
         }
         else if(target == "application_not_found"){}
         else {
             target = "error";
         }
     }
-    catch (exception& e) {
-        cerr << "__callbackWorkerMarussia [target analize]: " << e.what() << endl;
+    catch (std::exception& e) {
+        std::cerr << "__callbackWorkerMarussia [target analize]: " << e.what() << std::endl;
         target = "error";
     };
     /*------------*/
@@ -389,14 +389,14 @@ void Session::__callbackWorkerMarussia(boost::json::value data) {
 void Session::__callbackWorkerMQTT(boost::json::value data) {
     boost:json::value target;
     boost::json::object response_data = {};
-    u8string text;
-    string result_text;
+    //std::u8string text;
+    std::string result_text;
 
     try {
         target = data.at("target");
     }
-    catch (exception& e) {
-        cout << "__callbackWorkerMarussia [target]: " << e.what();
+    catch (std::exception& e) {
+        std::cout << "__callbackWorkerMarussia [target]: " << e.what();
         target = "error";
     };
 
@@ -420,8 +420,8 @@ void Session::__callbackWorkerMQTT(boost::json::value data) {
             target = "error";
         }
     }
-    catch (exception& e) {
-        cerr << "__callbackWorkerMarussia [target analize]: " << e.what() << endl;
+    catch (std::exception& e) {
+        std::cerr << "__callbackWorkerMarussia [target analize]: " << e.what() << std::endl;
         target = "error";
     };
     //string_body a;
@@ -481,7 +481,7 @@ Listener::Listener( net::io_context& io_ctx,
                                                                          __ssl_ctx(ssl_ctx)
 {
     
-    __acceptor = make_shared<tcp::acceptor>(__io_ctx, tcp::endpoint(tcp::v4(), port));
+    __acceptor = std::make_shared<tcp::acceptor>(__io_ctx, tcp::endpoint(tcp::v4(), port));
 
     __sessions_mqtt = sessions_mqtt;
     __sessions_marussia = sessions_marussia;
@@ -490,7 +490,7 @@ Listener::Listener( net::io_context& io_ctx,
     __path_to_ssl_certificate = path_to_ssl_certificate;
     __path_to_ssl_key = path_to_ssl_key;
 } 
-void Listener::start(std::shared_ptr< shared_ptr<map<string, vector<string>>>> sp_db_marusia_station, std::shared_ptr< shared_ptr<map<string, vector<string>>>> sp_db_lift_blocks) {
+void Listener::start(std::shared_ptr< std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_marusia_station, std::shared_ptr< std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_lift_blocks) {
     __sp_db_marusia_station = sp_db_marusia_station;
     __sp_db_lift_blocks = sp_db_lift_blocks;
     __acceptor->async_accept(beast::bind_front_handler(&Listener::__onAccept, shared_from_this()));

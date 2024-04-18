@@ -1,4 +1,4 @@
-link_directories(PRIVATE ../)
+link_directories(PUBLIC ../)
 add_library(HTTPSServer STATIC HTTPSServer.cpp)
 
 target_include_directories(HTTPSServer PUBLIC ${Boost_INCLUDE_DIRS})

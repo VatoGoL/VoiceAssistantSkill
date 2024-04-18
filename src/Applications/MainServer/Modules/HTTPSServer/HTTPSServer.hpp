@@ -48,8 +48,8 @@ namespace https_server {
         std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> __sessions_mqtt;
         std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> __sessions_marusia;
 
-        std::shared_ptr< shared_ptr<map<string, vector<string>>>> __sp_db_marusia_station;
-        std::shared_ptr< shared_ptr<map<string, vector<string>>>> __sp_db_lift_blocks;
+        std::shared_ptr< std::shared_ptr<std::map<std::string, std::vector<std::string>>>> __sp_db_marusia_station;
+        std::shared_ptr< std::shared_ptr<std::map<std::string, std::vector<std::string>>>> __sp_db_lift_blocks;
 
         long __pos_ms_field = 0;
         long __pos_lb_field = 0;
@@ -57,7 +57,6 @@ namespace https_server {
         long __pos_worker_lu = 0;
 
         worker_server::SessionMarusia::marussia_station_request_t __request_marusia;
-        worker_server::SessionMQTT::move_lift_t __request_mqtt;
 
         std::string __path_to_ssl_certificate;
         std::string __path_to_ssl_key;
@@ -71,8 +70,8 @@ namespace https_server {
             std::string path_to_ssl_key,
             std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_mqtt,
             std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_marussia,
-            std::shared_ptr< shared_ptr<map<string, vector<string>>>> sp_db_marusia_station, 
-            std::shared_ptr< shared_ptr<map<string, vector<string>>>> sp_db_lift_blocks);
+            std::shared_ptr< std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_marusia_station, 
+            std::shared_ptr< std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_lift_blocks);
         ~Session();
         void run();
         bool isLive();
@@ -110,8 +109,8 @@ namespace https_server {
         std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> __sessions_mqtt;
         std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> __sessions_marussia;
 
-        std::shared_ptr< shared_ptr<map<string, vector<string>>>> __sp_db_marusia_station;
-        std::shared_ptr< shared_ptr<map<string, vector<string>>>> __sp_db_lift_blocks;
+        std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> __sp_db_marusia_station;
+        std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> __sp_db_lift_blocks;
 
         std::string __path_to_ssl_certificate;
         std::string __path_to_ssl_key;
@@ -123,7 +122,7 @@ namespace https_server {
                   unsigned short port,
                   std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_mqtt,
                   std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_marussia);
-        void start(std::shared_ptr< shared_ptr<map<string, vector<string>>>> sp_db_marusia_station, std::shared_ptr< shared_ptr<map<string, vector<string>>>> sp_db_lift_blocks);
+        void start(std::shared_ptr< std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_marusia_station, std::shared_ptr< std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_lift_blocks);
     
     private:
         void __onAccept(beast::error_code ec, tcp::socket socket);
