@@ -13,5 +13,8 @@ target_include_directories(DataBaseServer PUBLIC ${GlobalModules_ROOT_DIR})
 find_package(Boost COMPONENTS json thread chrono atomic REQUIRED)
 target_link_libraries(DataBaseServer PUBLIC Boost::thread)
 target_link_libraries(DataBaseServer PUBLIC Boost::json)
+target_link_libraries(DataBaseServer PUBLIC Logger)
+target_link_libraries(DataBaseServer PUBLIC Configer)
+target_link_libraries(DataBaseServer PUBLIC JSONFormatter)
 target_link_libraries(DataBaseServer PUBLIC SQLiteAPI)
 

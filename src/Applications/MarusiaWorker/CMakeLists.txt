@@ -14,5 +14,7 @@ target_link_libraries(MarusiaWorker PUBLIC Boost::thread)
 target_link_libraries(MarusiaWorker PUBLIC Boost::json)
 target_link_libraries(MarusiaWorker PUBLIC Boost::locale)
 target_link_libraries(MarusiaWorker PUBLIC WorkerM)
+target_link_libraries(MarusiaWorker PUBLIC Configer)
+target_link_libraries(MarusiaWorker PUBLIC Logger)
  
-target_link_libraries(appMarusiaWorker PRIVATE MarusiaWorker)
+target_link_libraries(appMarusiaWorker PUBLIC MarusiaWorker)

@@ -8,8 +8,9 @@
 #include <boost/asio.hpp>
 #include <boost/json.hpp>
 #include <boost/config.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+//#include <boost/property_tree/ptree.hpp>
+//#include <boost/property_tree/json_parser.hpp>
+#include <boost/bind.hpp>
 #include <boost/beast.hpp> 
 #include <algorithm>
 #include <cstdlib>

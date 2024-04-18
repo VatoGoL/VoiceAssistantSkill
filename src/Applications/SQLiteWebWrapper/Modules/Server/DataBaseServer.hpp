@@ -7,10 +7,7 @@
 #include <boost/lambda2.hpp>
 #include <boost/asio.hpp>
 #include <boost/json.hpp>
-#include <boost/json/src.hpp>
 #include <boost/config.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
 #include <boost/beast.hpp>
 #include <algorithm>
 #include <cstdlib>
@@ -26,6 +23,7 @@
 #include <map>
 #include <list>
 #include <queue>
+#include <boost/bind.hpp>
 
 #define DB_WAY "./SmartLiftBase.db"
 

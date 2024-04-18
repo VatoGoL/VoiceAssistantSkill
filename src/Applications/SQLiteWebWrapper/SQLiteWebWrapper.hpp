@@ -1,6 +1,9 @@
 #pragma once
 
 #include "Modules/Server/DataBaseServer.hpp"
+////////#include <GlobalModules/JSONFormatter/JSONFormatter.hpp>
+#include <GlobalModules/Logger/Logger.hpp>
+#include <GlobalModules/Configer/Configer.hpp>
 #define DEFINE_CONFIG "config.txt"
 
 class ServerDataBase: public std::enable_shared_from_this<ServerDataBase>
