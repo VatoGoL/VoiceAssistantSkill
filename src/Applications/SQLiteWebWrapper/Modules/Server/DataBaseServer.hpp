@@ -83,14 +83,19 @@ public:
 class Server : public std::enable_shared_from_this<Server>
 {
 public:
-	Server(std::shared_ptr<net::io_context> io_context, std::string name_config_file, 
-           std::shared_ptr<Logger> log_server, std::map<std::string, std::string> config_info);
+	enum PROCESS_CODE {
+		SUCCESSFUL = 0,
+		UNKNOWN_ERROR,
+		CONFIG_DATA_NOT_FULL,
+		CONFIG_DATA_NOT_CORRECT
+	};
+
+	Server(std::shared_ptr<net::io_context> io_context);
+	PROCESS_CODE init();
 	void run();
 	void stop();
 	~Server();
 private:
-	std::shared_ptr<Logger> __log_server;
-	std::map<std::string, std::string> __config_info;
 	std::shared_ptr<tcp::acceptor> __acceptor;
 	std::shared_ptr<net::io_context> __ioc;
 	std::shared_ptr<std::vector<std::shared_ptr<DataBase>>> __sessions;

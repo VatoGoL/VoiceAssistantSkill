@@ -1,23 +1,53 @@
 #include "SQLiteWebWrapper.hpp"
 
-ServerDataBase::ServerDataBase(std::string config_way, std::string name_conf)
+ServerDataBase::PROCESS_CODE ServerDataBase::init(std::string config_way, std::string name_conf)
 {
-    std::string way = "";
-    if (name_conf == "")
-    {
-        __name_config = DEFINE_CONFIG;
+    try{
+		Logger::init();
+		Configer::init(config_way,name_conf);
+	}catch(Logger::error_logger_t &e){
+		switch(e){
+			case Logger::error_logger_t::FILE_NOT_OPEN:
+				return LOG_FILE_NOT_OPEN;
+			break;
+			default:
+				return UNKNOWN_ERROR;
+			break;
+		}
+	}catch(Configer::error_configer_t &e){
+		switch(e){
+			case Configer::error_configer_t::FILE_NOT_OPEN:
+				return CONFIG_FILE_NOT_OPEN;
+			break;
+			default:
+				return UNKNOWN_ERROR;
+			break;
+		}
+	}
+    
+    Configer::readConfig();
+    std::map<std::string, std::string>& configuration = Configer::getConfigInfo();
+    try{
+        __count_threads = std::stoi(configuration.at("Count_threads"));
+    }catch(std::exception &e){
+        Logger::writeLog("ServerDataBase","init",Logger::log_message_t::ERROR,e.what());
+		return PROCESS_CODE::CONFIG_DATA_NOT_FULL;
     }
-    else
-    {
-        __name_config = name_conf;
+    
+    __ioc = std::make_shared<boost::asio::io_context>(__count_threads);
+    __server = std::make_shared<Server>(__ioc, "");
+    switch(__server->init()){
+        case Server::UNKNOWN_ERROR:
+            return UNKNOWN_ERROR;
+            break;
+		case Server::CONFIG_DATA_NOT_FULL:
+            return CONFIG_DATA_NOT_FULL;
+            break;
+		case Server::CONFIG_DATA_NOT_CORRECT:
+            return CONFIG_DATA_NOT_CORRECT;
+            break;
     }
-    if (config_way != "")
-    {
-        way = config_way;
-    }
-    __log_server = std::make_shared<Logger>("Log/", "./", "DataBase");
-    __config = std::make_shared<Configer>(__log_server, "./", way, __name_config);
-    __config->readConfig();
+    return SUCCESSFUL;
 }
 ServerDataBase::~ServerDataBase()
 {
@@ -25,38 +55,11 @@ ServerDataBase::~ServerDataBase()
 }
 void ServerDataBase::start()
 {
-    __config_info = __config->getConfigInfo();
-    if (__config_info.size() == 0)
-    {
-        __log_server->writeLog(1, "DataBase", "Config_File_not_open");
-        return;
-    }
-    else if (__config_info.size() < CONFIG_NUM_FIELDS)
-    {
-        __log_server->writeLog(1, "DataBase", "Config_File_not_full");
-    }
-    try
-    {
-        for (size_t i = 0, length = __config_info.size() - 1; i < length; i++)
-        {
-            __config_info.at(CONFIG_FIELDS.at(i));
-            std::cerr << CONFIG_FIELDS.at(i) << " " << __config_info.at(CONFIG_FIELDS.at(i)) << std::endl;
-        }
-    }
-    catch (std::exception& e)
-    {
-        std::cerr << "error" << std::endl;
-        __log_server->writeLog(1, "DataBase", e.what());
-        return;
-    }
-    __countThreads = std::stoi(__config_info.at("Count_threads"));
-    __ioc = std::make_shared<boost::asio::io_context>(__countThreads);
-    __server = std::make_shared<Server>(__ioc, "", __log_server, __config_info);
     __server->run();
 
     std::vector<std::thread> v;
-    v.reserve(__countThreads - 1);
-    for (auto i = __countThreads - 1; i > 0; --i)
+    v.reserve(__count_threads - 1);
+    for (auto i = __count_threads - 1; i > 0; --i)
         v.emplace_back(
             [this]
             {

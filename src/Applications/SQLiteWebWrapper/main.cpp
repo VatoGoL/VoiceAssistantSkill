@@ -16,6 +16,32 @@ int main(int argc, char* argv[])
             config_file_name = argv[++i];
         }
     }
-	ServerDataBase sDB(config_file_way, config_file_name);
-	sDB.start();
+	ServerDataBase app;
+    switch(app.init()){
+        case ServerDataBase::PROCESS_CODE::UNKNOWN_ERROR:
+            std::cerr << "ERROR! app init: unknown error" << std::endl;
+            return EXIT_FAILURE;
+            break;
+        case ServerDataBase::PROCESS_CODE::LOG_FILE_NOT_OPEN:
+            std::cerr << "ERROR! app init: log file not open" << std::endl;
+            return EXIT_FAILURE;
+            break;
+        case ServerDataBase::PROCESS_CODE::CONFIG_FILE_NOT_OPEN:
+            std::cerr << "ERROR! app init: config file not open" << std::endl;
+            return EXIT_FAILURE;
+            break;
+        case ServerDataBase::PROCESS_CODE::CONFIG_DATA_NOT_FULL:
+            std::cerr << "ERROR! app init: config data not full" << std::endl;
+            return EXIT_FAILURE;
+            break;
+        case ServerDataBase::PROCESS_CODE::CONFIG_DATA_NOT_CORRECT:
+            std::cerr << "ERROR! app init: config data not correct" << std::endl;
+            return EXIT_FAILURE;
+            break;
+        case ServerDataBase::PROCESS_CODE::SUCCESSFUL:
+            app.start();
+        break;
+    }
+	
+    return EXIT_SUCCESS;
 }

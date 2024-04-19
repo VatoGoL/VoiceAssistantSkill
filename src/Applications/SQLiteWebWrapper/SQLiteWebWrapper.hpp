@@ -4,23 +4,27 @@
 ////////#include <GlobalModules/JSONFormatter/JSONFormatter.hpp>
 #include <GlobalModules/Logger/Logger.hpp>
 #include <GlobalModules/Configer/Configer.hpp>
-#define DEFINE_CONFIG "config.txt"
+
 
 class ServerDataBase: public std::enable_shared_from_this<ServerDataBase>
 {
 private:
 	std::shared_ptr<net::io_context> __ioc;
-	short __countThreads;
+	short __count_threads;
 	std::shared_ptr<Server> __server;
-	std::shared_ptr<Configer> __config;
-	std::shared_ptr<Logger> __log_server;
-	std::string __name_config;
-	std::map<std::string, std::string> __config_info;
-	static const int CONFIG_NUM_FIELDS = 2;
-	std::vector<std::string> CONFIG_FIELDS = { "Port", "Count_threads"};
 public:
-	ServerDataBase(std::string config_way, std::string name_conf);
+	enum PROCESS_CODE {
+		SUCCESSFUL = 0,
+		UNKNOWN_ERROR,
+		LOG_FILE_NOT_OPEN,
+		CONFIG_FILE_NOT_OPEN,
+		CONFIG_DATA_NOT_FULL,
+		CONFIG_DATA_NOT_CORRECT
+	};
+
+	ServerDataBase() = default;
 	~ServerDataBase();
+	PROCESS_CODE init(std::string config_way = "./", std::string name_conf = Configer::CONFIG_FILE);
 	void start();
 	void stop();
 };
