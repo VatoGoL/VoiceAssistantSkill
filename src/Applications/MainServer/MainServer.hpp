@@ -1,4 +1,7 @@
 #pragma once
+
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
+
 #include <iostream>
 #include <string>
 #include <map>
@@ -13,7 +16,6 @@
 #include "Modules/HTTPSServer/HTTPSServer.hpp"
 #include "Modules/SSLSertificate/SSLSertificate.hpp"
 #include <GlobalModules/ClientDB/ClientDB.hpp>
-//using namespace std;
 
 class MainServer:public std::enable_shared_from_this<MainServer> {
 private:
@@ -39,14 +41,11 @@ private:
 	std::shared_ptr<Configer> __configer;
 
 	std::shared_ptr<std::map<std::string, std::vector<std::string>>> __sp_db_worker_marusia;
-	std::shared_ptr<std::map<std::string, std::vector<std::string>>> __sp_db_worker_lu;
 	std::shared_ptr<std::map<std::string, std::vector<std::string>>> __sp_db_marusia_station;
 	std::shared_ptr<std::map<std::string, std::vector<std::string>>> __sp_db_lift_blocks;
 
 	std::shared_ptr<https_server::Listener> __server_https;
-	std::shared_ptr<worker_server::Server> __server_w_mqtt;
 	std::shared_ptr<worker_server::Server> __server_w_marusia;
-	//shared_ptr<net_repeater::Server> __server_mqtt_repeater;
 	std::shared_ptr<ClientDB> __client_db;
 
 	std::queue<std::string> __table_name;

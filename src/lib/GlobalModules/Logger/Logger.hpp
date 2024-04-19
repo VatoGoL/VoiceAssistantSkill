@@ -1,33 +1,57 @@
 #pragma once
-#include <algorithm>
-#include <cstdlib>
+#include <functional>
 #include <iostream>
 #include <string>
-#include <locale.h>
 #include <ctime>
-#include <map>
-#include <memory>
 #include <fstream>
+#include <filesystem>
+#include <queue>
 
-class Logger : public std::enable_shared_from_this<Logger>
+namespace fs = std::filesystem;
+
+class Logger
 {
 public:
-    Logger(std::string way, std::string root_directory, std::string name_class);
-    void writeTempLog(int error, std::string clas, std::string message);
-    void writeLog(int error, std::string clas, std::string message);
-    void setFinalPath();
-    std::streamsize getFileSize();
-    std::string getDate();
+    static const std::string DEFAULT_PATH;
+    static const std::string DEFAULT_DIRECTORY;
+    static const std::string PREFIX;
+    static const std::string POSTFIX;
+    static const size_t MAX_FILESIZE;
+    static const uint8_t MAX_COUNT_MESSAGE_IN_QUEUE;
+
+    enum log_message_t
+    {
+        ERROR = 0,
+        WARNING,
+        EVENT
+    };
+    enum error_logger_t
+    {
+        FILE_OPEN = 1,
+        CHECK_FILESIZE
+    };
+
+    typedef std::function<void(error_logger_t, std::string)> error_func_t;
+
+    Logger() = default;
+    ~Logger();
+    static void init(std::string path_to_log_directory = DEFAULT_PATH, 
+                     std::string directory = DEFAULT_DIRECTORY,
+                     error_func_t error_callback = std::bind(&Logger::__defaultErrorCallback,std::placeholders::_1,std::placeholders::_2));
+    
+    static void writeLog(std::string class_name, std::string method_name, log_message_t type_message, std::string message);
 private:
-    bool __checkFile();
-    void __writeLogToFile(std::string clas, std::string message, int error);
-    std::string __name_file;
-    std::string __final_path;
-    std::string __date;
-    int __num_file;
-    int __num_massive;
-    std::string __temporary_log[3];
-    std::string __way;
-    std::string __buf_way;
-    std::string __root_directory;
+
+    static void __writeLogQueue();
+    static void __defaultErrorCallback(error_logger_t error_type, std::string message);
+    static error_func_t __error_callback;
+    static std::string __path_to_log_directory;
+    static std::string __directory;
+    static std::string __full_path_to_directory;
+    static std::string __filename;
+
+    static const uint16_t __DELTA_FILESIZE;
+    static std::queue<std::string> __message_log_queue;
+
+    static std::ofstream __fout;
 };

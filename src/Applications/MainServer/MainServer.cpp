@@ -1,4 +1,5 @@
 #include "MainServer.hpp"
+
 using namespace boost::placeholders;
 MainServer::MainServer() {}
 MainServer::~MainServer() {
@@ -46,7 +47,7 @@ MainServer::PROCESS_CODE MainServer::init(std::string path_to_config_file) {
 	
 	//__server_w_mqtt = std::make_shared<worker_server::Server>(__io_ctx, __port_worker_mqtt_info,worker_server::WORKER_MQTT_T);
 	__server_w_marusia = std::make_shared<worker_server::Server>(__io_ctx, __port_worker_marusia, worker_server::WORKER_MARUSIA_T);
-	__server_https = std::make_shared<https_server::Listener>(*__io_ctx, *__ssl_ctx,configuration.at("Path_to_ssl_sertificate"),configuration.at("Path_to_ssl_key"),__port_marusia_station, __server_w_mqtt->getSessions(), __server_w_marusia->getSessions());
+	__server_https = std::make_shared<https_server::Listener>(*__io_ctx, *__ssl_ctx,configuration.at("Path_to_ssl_sertificate"),configuration.at("Path_to_ssl_key"),__port_marusia_station, __server_w_marusia->getSessions());
 	__client_db = std::make_shared<ClientDB>(__db_ip, std::to_string(__port_db), __db_login, __db_password, 
 										"Main_server", std::make_shared<boost::asio::ip::tcp::socket>(*__io_ctx), 
 										bind(&MainServer::__updateDataCallback, this,_1));
@@ -56,7 +57,6 @@ MainServer::PROCESS_CODE MainServer::init(std::string path_to_config_file) {
 	return PROCESS_CODE::SUCCESSFUL;
 }
 void MainServer::stop(){
-	__server_w_mqtt->stop();
 	__server_w_marusia->stop();
 }
 void MainServer::start() {
@@ -86,12 +86,9 @@ void MainServer::__startServers(std::map<std::string, std::map<std::string, std:
 	__client_db->setCallback(bind(&MainServer::__updateDataCallback, this, _1));
 	__update_timer->expires_from_now(boost::posix_time::seconds(__TIME_UPDATE));
 	__update_timer->async_wait(boost::bind(&MainServer::__updateTimerCallback, this, _1));
-	//__server_mqtt_repeater->start(make_shared<shared_ptr<map<string, vector<string>>>>(__sp_db_worker_lu), 
-	//							  make_shared<shared_ptr<map<string, vector<string>>>>(__sp_db_lift_blocks));
-	__server_w_mqtt->start(std::make_shared<std::shared_ptr<std::map<std::string, std::vector<std::string>>>>(__sp_db_worker_lu));
+	
 	__server_w_marusia->start(std::make_shared<std::shared_ptr<std::map<std::string, std::vector<std::string>>>>(__sp_db_worker_marusia));
-	__server_https->start(std::make_shared<std::shared_ptr<std::map<std::string, std::vector<std::string>>>>(__sp_db_marusia_station),
-						  std::make_shared<std::shared_ptr<std::map<std::string, std::vector<std::string>>>>(__sp_db_lift_blocks));
+	__server_https->start(std::make_shared<std::shared_ptr<std::map<std::string, std::vector<std::string>>>>(__sp_db_marusia_station));
 }
 void MainServer::__loadDataBase() {
 	__client_db->setCallback(bind(&MainServer::__startServers, this, _1));
@@ -122,7 +119,6 @@ void MainServer::__updateData(std::map<std::string, std::map<std::string, std::v
 	std::shared_ptr<std::map<std::string, std::vector<std::string>>> temp_sp_db_lift_blocks = std::make_shared<std::map<std::string, std::vector<std::string>>>(data.at("LiftBlocks"));
 	
 	__sp_db_worker_marusia = temp_sp_db_worker_marusia;
-	__sp_db_worker_lu = temp_sp_db_worker_lu;
 	__sp_db_marusia_station = temp_sp_db_marusia_station;
 	__sp_db_lift_blocks = temp_sp_db_lift_blocks;
 }

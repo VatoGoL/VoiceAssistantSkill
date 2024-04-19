@@ -1,140 +1,101 @@
 #include "Logger.hpp"
 
-Logger::Logger(std::string way, std::string rootDirectory, std::string nameClass)
+const std::string Logger::DEFAULT_PATH = "./";
+const std::string Logger::DEFAULT_DIRECTORY = "Logs";
+const std::string Logger::PREFIX = "log";
+const std::string Logger::POSTFIX = ".log";
+const size_t DEFAULT_MAX_FILESIZE = 1024*100; //100Kb
+const uint16_t Logger::__DELTA_FILESIZE = 1024*2; //2Kb
+std::string Logger::__full_path_to_directory = DEFAULT_PATH+DEFAULT_DIRECTORY;
+std::ofstream Logger::__fout(__full_path_to_directory + PREFIX + "_notInit" + POSTFIX);
+std::queue<std::string> __message_log_queue;
+const uint8_t MAX_COUNT_MESSAGE_IN_QUEUE = 10;
+Logger::error_func_t Logger::__error_callback = {};
+
+void Logger::init(std::string path_to_log_directory, std::string directory, error_func_t error_callback)
 {
-	__root_directory = rootDirectory;
-	__name_file = nameClass;
-	__way = way;
-	__date = getDate();
-	__num_file = 1;
-	setFinalPath();
-	__num_massive = 2;
-}
+	__error_callback = error_callback;
+	__path_to_log_directory = path_to_log_directory;
+	__directory = directory;
+	__full_path_to_directory = __path_to_log_directory + "/" + __directory;
 
-
-
-void Logger::writeLog(int error, std::string clas, std::string message)
-{
-	bool flagFile = __checkFile();
-	if (flagFile == false)
-	{
-		__writeLogToFile(clas, message, error);
+	if(!fs::exists(__full_path_to_directory)){
+		fs::create_directory(directory);
 	}
-	else
-	{
-		std::string buffDate = getDate();
-		std::streamsize fileSize = getFileSize();
-		if (fileSize >= 204800)
-		{
-			if (__date == buffDate)
-			{
-				__num_file++;
-				setFinalPath();
-			}
-			else
-			{
-				__date = buffDate;
-				__num_file = 1;
-				setFinalPath();
-			}
-		}
-		else if (buffDate != __date)
-		{
-			__date = buffDate;
-			__num_file = 1;
-			setFinalPath();
-		}
-		else
-		{
-			setFinalPath();
-		}
-		__writeLogToFile(clas, message, error);
+	time_t actual_time = time(NULL);
+	 
+	__filename = PREFIX + "_" 
+				 + std::string(std::put_time(std::localtime(&actual_time), "%Y_%m_%d_%H_%M_%S")._M_fmt)
+				 + POSTFIX;
+	
+	__fout.open(__filename, std::ofstream::app);
+	if(!__fout.is_open()){
+		throw error_logger_t::FILE_OPEN;
 	}
+	__fout.close();
 }
-
-void Logger::__writeLogToFile(std::string clas, std::string message, int error)
+void Logger::writeLog(std::string class_name, std::string method_name, log_message_t type_message, std::string message)
 {
-	std::ofstream ost(__final_path, std::ios::app);
-	std::string buffLog = "(" + __date + ")_" + clas + "_" + "\"" + message + "\"";
-	if (error != 0)
-	{
-		buffLog = buffLog + "_" + std::to_string(error);
+	if(__message_log_queue.size() >= MAX_COUNT_MESSAGE_IN_QUEUE){
+		__writeLogQueue();
 	}
-	buffLog = buffLog + "\n";
-	ost << buffLog;
-	ost.close();
-}
-
-std::string Logger::getDate()
-{
-	time_t curtime;
-	struct tm* loctime;
-	char buffer[12];
-	time(&curtime);
-	loctime = localtime(&curtime);
-	strftime(buffer, 12, "%d_%m_%Y", loctime);
-	std::string time = buffer;
-	return time;
-}
-
-bool Logger::__checkFile()
-{
-	std::ifstream fin(__final_path);
-	if (fin.is_open())
-	{
-		return true;
-		fin.close();
-	}
-	return false;
-}
-
-std::streamsize Logger::getFileSize()
-{
-	std::fstream file(__final_path, std::fstream::in);
-	file.seekg(0, std::ios::end);
-	std::streamsize fileSize = file.tellg();
-	file.close();
-	return fileSize;
-}
-
-void Logger::setFinalPath()
-{
-	__final_path = __root_directory + __way + __name_file + "_(" + __date + ")_" + std::to_string(__num_file) + ".log";
-}
-
-void Logger::writeTempLog(int error, std::string clas, std::string message)
-{
-	std::string buffLog = "(" + __date + ")_" + clas + "_" + "\"" + message + "\"";
-	if (error != 0)
-	{
-		buffLog = buffLog + "_" + std::to_string(error);
-	}
-	switch (__num_massive)
-	{
-	case 2:
-	{
-		__temporary_log[__num_massive] = buffLog;
-		__num_massive = 1;
+	std::string type_message_str;
+	switch(type_message){
+		case ERROR:
+			type_message_str = "ERROR";
+		break;
+		case WARNING:
+			type_message_str = "WARNING";
+		break;
+		case EVENT:
+			type_message_str = "EVENT";
 		break;
 	}
-	case 1:
-	{
-		__temporary_log[__num_massive] = __temporary_log[__num_massive + 1];
-		__temporary_log[__num_massive + 1] = buffLog;
-		__num_massive = 0;
-		break;
-	}
-	case 0:
-	{
-		for (int i = 0; i < 2; i++)
+
+	time_t actual_time = time(NULL);
+	std::string end_message = "[" + std::string(std::put_time(std::localtime(&actual_time), "%Y_%m_%d_%H_%M_%S")._M_fmt) + "]["
+							  + type_message_str + "] Class: " + class_name + "; Method: " + method_name + "; Message: "
+							  + message;	
+	__message_log_queue.push(end_message);
+}
+void Logger::__writeLogQueue()
+{
+	try{
+		if(fs::file_size(__filename) > MAX_FILESIZE - __DELTA_FILESIZE)
 		{
-			__temporary_log[i] = __temporary_log[i + 1];
+			time_t actual_time = time(NULL);
+			__filename = PREFIX + "_" 
+				 + std::string(std::put_time(std::localtime(&actual_time), "%Y_%m_%d_%H_%M_%S")._M_fmt)
+				 + POSTFIX;
 		}
-		__num_massive = 2;
-		__temporary_log[__num_massive] = buffLog;
-		break;
+	}catch(std::exception &e){
+		__error_callback(CHECK_FILESIZE, e.what());
+		return;
 	}
-	default:
-		break;
+
+	__fout.open(__filename, std::ofstream::app);
+	if(!__fout.is_open()){
+		__error_callback(FILE_OPEN, "log file" + __filename + "not open");
+		return;
 	}
+
+	while(!__message_log_queue.empty())
+	{
+		__fout << __message_log_queue.front() << std::endl;
+		__message_log_queue.pop();
+	}
+
+	__fout.close();
+}
+void Logger::__defaultErrorCallback(error_logger_t error_type, std::string message)
+{
+	switch(error_type){
+		case FILE_OPEN:
+			std::cerr << "ERROR! Logger - __defaultErrorCallback: file not open, message: " + message << std::endl;
+			break;
+	}
+}
+Logger::~Logger()
+{
+	__writeLogQueue();
 }

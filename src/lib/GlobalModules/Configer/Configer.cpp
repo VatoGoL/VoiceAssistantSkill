@@ -1,13 +1,12 @@
 #include "Configer.hpp"
 
 
-Configer::Configer(std::shared_ptr<Logger> lg, std::string root_directory, std::string way, std::string file_name)
+void Configer::init(std::string root_directory, std::string way, std::string file_name, error_func_t callback)
 {
-	std::cerr << "HI" << std::endl;
+	__callback = callback;
 	if (file_name == "") {
 		__file_name = CONFIG_FILE;
 	}
-	setLog(lg);
 
 	__root_directory = root_directory;
 	__way = way;
@@ -20,21 +19,15 @@ Configer::Configer(std::shared_ptr<Logger> lg, std::string root_directory, std::
 		__file_name = CONFIG_FILE;
 	}
 	__final_path = __root_directory + __way +  __file_name;
-	std::cerr << "final " << __final_path << std::endl;
 	std::ifstream fin(__final_path);
 	if (!fin.is_open())
 	{
-		__writeError(NOT_FOUND_CONFIG_FILE);
+		throw error_configer_t::FILE_NOT_OPEN;
 	}
 	else
 	{
 		fin.close();
 	}
-}
-
-void Configer::setLog(std::shared_ptr<Logger> lg)
-{
-	__log_config = lg;
 }
 
 void Configer::setWay(std::string way)
@@ -49,10 +42,6 @@ void Configer::setRootDirectory(std::string root_directory) {
 void Configer::setFileName(std::string file_name) {
 	__file_name = file_name;
 	__final_path = __way + __root_directory + __file_name;
-}
-void Configer::__writeError(int error)
-{
-	__log_config->writeLog(error, "Config", "open config");
 }
 
 void Configer::readConfig()
@@ -75,17 +64,26 @@ void Configer::readConfig()
 			}
 			config.insert(std::pair<std::string, std::string>(key, boof));
 		}
-		__log_config->writeLog(0, "config", "Write Config");
 		__config_info = config;
 		fin.close();
 	}
 	else
 	{
-		__writeError(NOT_FOUND_CONFIG_FILE);
+		Logger::writeLog("Configer", "readConfig", Logger::log_message_t::ERROR, "config file not open");
+		__callback(FILE_NOT_OPEN, "config file not open");
 		return;
 	}
 }
-std::map<std::string, std::string> Configer::getConfigInfo()
+std::map<std::string, std::string>& Configer::getConfigInfo()
 {
 	return __config_info;
+}
+void Configer::__defaultErrorCallback(error_configer_t error_type, std::string message)
+{
+	switch(error_type)
+	{
+		case FILE_NOT_OPEN:
+			std::cerr << "ERROR! Configer - __defaultErrorCallback, message: " << message << std::endl;
+			break;
+	}
 }
