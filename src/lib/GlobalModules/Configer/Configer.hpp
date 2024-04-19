@@ -13,12 +13,13 @@
 #include <fstream>
 #include <GlobalModules/Logger/Logger.hpp>
 
-#define CONFIG_FILE "config.txt"
+
 
 
 class Configer
 {
 public:
+    static const std::string CONFIG_FILE;
     enum error_configer_t{
         FILE_NOT_OPEN = 1
     };

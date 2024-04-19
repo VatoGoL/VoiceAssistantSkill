@@ -1,61 +1,69 @@
 #include "MarusiaWorker.hpp"
 
-MarusiaWorker::MarusiaWorker(std::string way_conf_file, std::string name_conf_file)
+MarusiaWorker::PROCESS_CODE MarusiaWorker::init(std::string way_to_conf_file, std::string name_conf_file)
 {
-    __log_server = std::make_shared<Logger>("Log/", "./", "Marussia_Worker");
-    std::string way = "";
-    if (name_conf_file == "")
-    {
-        name_config = DEFINE_CONFIG;
-    }
-    else
-    {
-        name_config = name_conf_file;
-    }
-    if (way_conf_file != "")
-    {
-        way = way_conf_file;
-    }
-    std::cerr << way << std::endl;
-    __config = std::make_shared<Configer>(__log_server, "./", way, name_config);
-    __config->readConfig();
-    __config_info = __config->getConfigInfo();
+ 
+    try{
+		Logger::init();
+		Configer::init("./",way_to_conf_file,name_conf_file);
+	}catch(Logger::error_logger_t &e){
+		switch(e){
+			case Logger::error_logger_t::FILE_NOT_OPEN:
+				return LOG_FILE_NOT_OPEN;
+			break;
+			default:
+				return UNKNOWN_ERROR;
+			break;
+		}
+	}catch(Configer::error_configer_t &e){
+		switch(e){
+			case Configer::error_configer_t::FILE_NOT_OPEN:
+				return CONFIG_FILE_NOT_OPEN;
+			break;
+			default:
+				return UNKNOWN_ERROR;
+			break;
+		}
+	}
+
+    Configer::readConfig();
+    std::map<std::string, std::string>& configuration = Configer::getConfigInfo();
+    
+	try {
+		__count_threads = stoi(configuration.at("Count_threads"));
+        if (__count_threads < 1) 
+		{
+			Logger::writeLog("MarusiaWorker","init",Logger::log_message_t::ERROR,"Port <= 0");
+			return PROCESS_CODE::CONFIG_DATA_NOT_CORRECT;
+		}
+		__ioc = std::make_shared<boost::asio::io_context>(__count_threads);
+        __session = std::make_shared<WorkerM>(*__ioc);
+	}
+	catch (std::exception& e) {
+		Logger::writeLog("MarusiaWorker","init",Logger::log_message_t::ERROR,e.what());
+		return PROCESS_CODE::CONFIG_DATA_NOT_FULL;
+	}
+
+    __ioc = std::make_shared<boost::asio::io_context>(__count_threads);
+    __session = std::make_shared<WorkerM>(*__ioc);
+	switch(__session->init()){
+		case WorkerM::PROCESS_CODE::CONFIG_DATA_NOT_CORRECT:
+			Logger::writeLog("MarusiaWorker", "init", Logger::log_message_t::ERROR, "Config file not correct");
+			return PROCESS_CODE::CONFIG_DATA_NOT_CORRECT;
+		break;
+		case WorkerM::PROCESS_CODE::CONFIG_DATA_NOT_FULL:
+			Logger::writeLog("MarusiaWorker", "init", Logger::log_message_t::ERROR, "Config file not full");
+			return PROCESS_CODE::CONFIG_DATA_NOT_FULL;
+		break;
+		case WorkerM::PROCESS_CODE::UNKNOWN_ERROR:
+			Logger::writeLog("MarusiaWorker", "init", Logger::log_message_t::ERROR, "Unknown error");
+			return PROCESS_CODE::UNKNOWN_ERROR;
+		break;
+	}
+	return PROCESS_CODE::SUCCESSFUL;
 }
 void MarusiaWorker::run()
-{
-    if (__config_info.size() == 0)
-    {
-        __log_server->writeLog(1, "Marussia_Worker", "Config_File_not_open");
-        return;
-    }
-    else if (__config_info.size() < CONFIG_NUM_FIELDS)
-    {
-        __log_server->writeLog(1, "Marussia_Worker", "Config_File_not_full");
-        return;
-    }
-    try
-    {
-        for (size_t i = 0, length = __config_info.size() - 1; i < length; i++)
-        {
-            std::cerr << CONFIG_FIELDS.at(i) << std::endl;
-            __config_info.at(CONFIG_FIELDS.at(i));
-        }
-    }
-    catch (std::exception& e)
-    {
-        __log_server->writeLog(1, "Marussia_Worker", e.what());
-        return;
-    }
-    try
-    {
-        __count_threads = stoi(__config_info.at("Count_threads"));
-    }
-    catch (std::exception& e)
-    {
-        std::cerr << e.what() << std::endl;
-    }
-    __ioc = std::make_shared<boost::asio::io_context>(__count_threads);
-    __session = std::make_shared<WorkerM>(__config_info, *__ioc, __log_server);
+{ 
     __session->start();
     std::vector<std::thread> v;
     v.reserve(__count_threads - 1);

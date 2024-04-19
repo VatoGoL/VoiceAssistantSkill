@@ -1,5 +1,6 @@
 #include "Configer.hpp"
 
+const std::string CONFIG_FILE = "config.txt";
 
 void Configer::init(std::string root_directory, std::string way, std::string file_name, error_func_t callback)
 {

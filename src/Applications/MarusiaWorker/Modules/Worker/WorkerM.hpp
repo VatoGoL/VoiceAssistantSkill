@@ -35,13 +35,23 @@ using tcp = boost::asio::ip::tcp;
 class WorkerM : public std::enable_shared_from_this<WorkerM>
 {
 public:
+	enum PROCESS_CODE {
+		SUCCESSFUL = 0,
+		UNKNOWN_ERROR,
+		CONFIG_DATA_NOT_FULL,
+		CONFIG_DATA_NOT_CORRECT
+	};
+
 	typedef std::function<void(std::map<std::string, std::map<std::string, std::vector<std::string>>> )> _callback_t;
 	_callback_t callback;
 
 	void __сallback(std::map<std::string, std::map<std::string, std::vector<std::string>>> data);
 
-	WorkerM(std::map<std::string, std::string> conf_info, net::io_context& ioc, std::shared_ptr<Logger> lg);
+	WorkerM(net::io_context& ioc);
 	~WorkerM();
+	
+	PROCESS_CODE init();
+
 	void start();
 	void stop();
 	void setDbInfo(std::map <std::string, std::map<std::string, std::vector<std::string>>> data);
@@ -57,10 +67,10 @@ private:
 
 	std::string __id;
 	std::string __ip_ms;
-	std::string __port_ms;
+	int __port_ms;
 	std::string __worker_id;
 	std::string __ip_db;
-	std::string __port_db;
+	int __port_db;
 	std::string __db_log;
 	std::string __db_pas;
 
@@ -77,7 +87,6 @@ private:
 	boost::json::value __buf_json_response;
 	boost::json::stream_parser __parser;
 	std::queue<std::string> __sender;
-	std::shared_ptr<Logger> __log;
 	std::shared_ptr<tcp::endpoint> __end_point;
 	bool __flag_disconnect = false;
 	bool __flag_end_send = false;
@@ -93,8 +102,6 @@ private:
 		{"двадцать шестой", 26}, {"двадцать седьмой", 27}, {"двадцать восьмой", 28}, {"двадцать девятый", 29}, {"тридцатый", 30}
 	};
 	std::vector<std::string> __mqtt_keys = { "этаж","подъем","спуск","подними","опусти" };
-
-	std::map<std::string, std::string> __config_info;
 
 	void __connectToMS();
 	void __sendConnect(const boost::system::error_code& eC);
