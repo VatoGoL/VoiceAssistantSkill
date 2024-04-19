@@ -11,4 +11,5 @@ find_package(Boost COMPONENTS json thread chrono atomic locale REQUIRED)
 
 target_link_libraries(Worker PUBLIC Boost::thread) 
 target_link_libraries(Worker PUBLIC Boost::json)
+target_link_libraries(Worker PUBLIC Logger)
 target_link_libraries(Worker PUBLIC JSONFormatter)

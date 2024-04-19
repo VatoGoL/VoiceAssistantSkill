@@ -15,7 +15,9 @@ int main(int argc, char* argv[])
         }
     }
 
-
+    MainServer ms;
+    ms.init(config_file_name);
+    ms.start();
 
     return EXIT_SUCCESS;
 }

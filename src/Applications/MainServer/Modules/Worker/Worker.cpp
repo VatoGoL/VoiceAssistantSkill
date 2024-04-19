@@ -81,7 +81,11 @@ ISession::ISession(){
     _sender = "";
     _json_parser.reset();
 }
-ISession::~ISession() { std::cout << "ISESSION DELETE" << std::endl; delete[] _buf_recive; }
+ISession::~ISession() 
+{   
+    Logger::writeLog("ISession","Destructor",Logger::log_message_t::EVENT,"Session delete");
+    delete[] _buf_recive; 
+}
 
 //-------------------------------------------------------------//
 
@@ -106,14 +110,12 @@ void Session::stop() {
     _ping_timer.cancel();
     _dead_ping_timer.cancel();
     try{
-        //_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_send);
-        //_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_receive);
         if (_socket.is_open()) {
             _socket.close();
         }
     }
     catch(std::exception &e){
-        std::cerr << "stop operation Worker server" << std::endl;
+        Logger::writeLog("Session","stop",Logger::log_message_t::ERROR,std::string("stop operation Worker server: ") + e.what());
     }
     
 }
@@ -135,7 +137,6 @@ void Session::_autorization() {
         }
         if (!successful_find) {
             throw std::invalid_argument("id not Found");
-            //throw exception("id not Found");
         }
         /*------------------------------------*/
         //� ������ ������
@@ -146,7 +147,7 @@ void Session::_autorization() {
         _ping_timer.async_wait(boost::bind(&Session::_ping, shared_from_this(), _1));
     }
     catch (std::exception& e) {
-        std::cerr << "__autorization " << e.what();
+        Logger::writeLog("Session","__autorization",Logger::log_message_t::ERROR, e.what());
         _buf_send = serialize(json_formatter::worker::response::connect(_sender, json_formatter::ERROR_CODE::CONNECT, "Field Id not found"));
     }
     _socket.async_send(boost::asio::buffer(_buf_send, _buf_send.size()),
@@ -165,7 +166,7 @@ Session::_CHECK_STATUS Session::_reciveCheck(const size_t& count_recive_byte, _h
 
         if (!_json_parser.done()) {
             std::fill_n(_buf_recive, _BUF_RECIVE_SIZE, 0);
-            std::cerr << "_reciveCheck json not full " << std::endl;
+            Logger::writeLog("Session","_reciveCheck",Logger::log_message_t::ERROR, "_reciveCheck json not full");
             _socket.async_receive(boost::asio::buffer(_buf_recive, _BUF_RECIVE_SIZE), handler);
             return _CHECK_STATUS::FAIL;
         }
@@ -177,7 +178,7 @@ Session::_CHECK_STATUS Session::_reciveCheck(const size_t& count_recive_byte, _h
         catch (std::exception& e) {
             _json_parser.reset();
             _buf_json_recive = {};
-            std::cerr << "_reciveCheck " << e.what();
+            Logger::writeLog("Session","_reciveCheck",Logger::log_message_t::ERROR, e.what());
             return _CHECK_STATUS::FAIL;
         }
     }
@@ -197,7 +198,7 @@ Session::_CHECK_STATUS Session::_sendCheck(const size_t& count_send_byte, size_t
 void Session::_sendCommand(const boost::system::error_code& error, std::size_t count_send_byte)
 {
     if (error) {
-        std::cerr << "_sendCommand " << error.what() << std::endl;
+        Logger::writeLog("Session","_sendCommand",Logger::log_message_t::ERROR, error.what());
         this->stop();
         return;
     }
@@ -223,12 +224,10 @@ void Session::_sendCommand(const boost::system::error_code& error, std::size_t c
 void Session::_reciveCommand(const boost::system::error_code& error, std::size_t count_recive_byte)
 {
     if (error) {
-        std::cerr << "_reciveCommand " << error.what() << std::endl;
+        Logger::writeLog("Session","_reciveCommand",Logger::log_message_t::ERROR, error.what());
         this->stop();
         return;
     }
-
-    
 
     if (_reciveCheck(count_recive_byte, boost::bind(&Session::_reciveCommand, shared_from_this(), _1, _2)) == _CHECK_STATUS::FAIL)
     {
@@ -241,7 +240,7 @@ void Session::_reciveCommand(const boost::system::error_code& error, std::size_t
 void Session::_ping(const boost::system::error_code& error)
 {
     if (error) {
-        std::cerr << "_ping " << error.what() << std::endl;
+        Logger::writeLog("Session","_ping",Logger::log_message_t::ERROR, error.what());
         this->stop();
         return;
     }
@@ -276,7 +275,7 @@ void Session::_analizePing()
         }
     }
     catch (std::exception& e) {
-        std::cerr << "_analizePing " << e.what() << std::endl << "Session stop" << std::endl;
+        Logger::writeLog("Session","_analizePing",Logger::log_message_t::ERROR, std::string("Session stop: ") + e.what());
         this->stop();
         return;
     }
@@ -301,7 +300,6 @@ void Session::__emptyCallback(boost::json::value data)
     std::cerr << "required __emptyCallback" << std::endl;
 }
 void Session::_commandAnalize() {}
-void Session::startCommand(COMMAND_CODE_MQTT command_code, void* command_parametr, _callback_t callback) {}
 void Session::startCommand(COMMAND_CODE_MARUSIA command_code, void* command_parametr, _callback_t callback) {}
 std::string Session::getId(){
     return _id;
@@ -326,19 +324,14 @@ void SessionMarusia::_commandAnalize()
             _analizePing();
         }
         else if (target == "static_message") {
-            /**/
             __staticMessage();
-        }
-        else if (target == "move_lift") {
-            /**/
-            //__moveLift();
         }
         else if (target == "connect") {
             _autorization();
         }
     }
     catch (std::exception& e) {
-        std::cerr << "_commandAnalize " << e.what() << std::endl;
+        Logger::writeLog("Session","_commandAnalize",Logger::log_message_t::ERROR, e.what());
     }
 }
 void SessionMarusia::startCommand(COMMAND_CODE_MARUSIA command_code, void* command_parametr, _callback_t callback)

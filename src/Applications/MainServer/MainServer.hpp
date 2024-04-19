@@ -25,9 +25,6 @@ private:
 	std::string __db_password = "";
 	int __port_db = 0;
 	int __port_marusia_station = 0;
-	int __port_mqtt = 0;
-	int __port_worker_mqtt = 0;
-	int __port_worker_mqtt_info = 0;
 	int __port_worker_marusia = 0;
 	std::vector<std::thread> __threads;
 
@@ -37,8 +34,6 @@ private:
  	short __count_threads;
 
 	std::map<std::string, std::string> __configuration;
-	std::shared_ptr<Logger> __logger;
-	std::shared_ptr<Configer> __configer;
 
 	std::shared_ptr<std::map<std::string, std::vector<std::string>>> __sp_db_worker_marusia;
 	std::shared_ptr<std::map<std::string, std::vector<std::string>>> __sp_db_marusia_station;
@@ -61,8 +56,11 @@ private:
 public:
 	enum PROCESS_CODE {
 		SUCCESSFUL = 0,
+		UNKNOWN_ERROR,
+		LOG_FILE_NOT_OPEN,
 		CONFIG_FILE_NOT_OPEN,
-		CONFIG_DATA_NOT_FULL
+		CONFIG_DATA_NOT_FULL,
+		CONFIG_DATA_NOT_CORRECT
 	};
 
 	MainServer();

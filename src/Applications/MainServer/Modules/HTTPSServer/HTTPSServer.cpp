@@ -4,9 +4,12 @@ using namespace https_server;
 
 //------------------------------------------------------------------------------
 void https_server::fail(beast::error_code ec, char const* what) {
-    if (ec == net::ssl::error::stream_truncated) { return; }
-
-    std::cerr << what << ": " << ec.message() << "\n";
+    if (ec == net::ssl::error::stream_truncated) 
+    { 
+        Logger::writeLog("https_server namespace", "fail",Logger::log_message_t::ERROR, std::string("error code = stream_truncated. ") + ec.message());
+        return;
+    }
+    Logger::writeLog("https_server namespace", "fail",Logger::log_message_t::ERROR, std::string(what) + ": " +ec.message());
 }
 //------------------------------------------------------------------------------
 
@@ -26,18 +29,14 @@ Session::Session(tcp::socket&& socket,
     __reconnect_count = 0;
 }
 Session::~Session(){
-    
-    std::cout << "KILL HTTPS SESSION" << std::endl;
+    Logger::writeLog("Session", "Destructor",Logger::log_message_t::EVENT, "KILL HTTPS SESSION");
 }
 
 void Session::run() {
-
-    std::cout << "METHOD RUN" << std::endl;
     net::dispatch( __stream.get_executor(), 
                     beast::bind_front_handler( &Session::__onRun, shared_from_this() ));
 }
 void Session::__onRun() {
-    std::cout << "METHOD OnRUN" << std::endl;
     // Set the timeout.
     beast::get_lowest_layer(__stream).expires_after(std::chrono::seconds(30));
     // Perform the SSL handshake
@@ -46,7 +45,6 @@ void Session::__onRun() {
 }
 void Session::__onHandshake(beast::error_code ec) {
     /*тут нужно добавить перечтение ssl сертификата*/
-    std::cout << "METHOD Handshake" << std::endl;
     if (ec) { 
 
         if(load_server_certificate(__ssl_ctx,__path_to_ssl_certificate, __path_to_ssl_key) == -1){
@@ -66,7 +64,6 @@ void Session::__onHandshake(beast::error_code ec) {
     __doRead();
 }
 void Session::__doRead() {
-    std::cout << "METHOD doRead" << std::endl;
     __req = {};
 
     // Set the timeout.
@@ -78,7 +75,6 @@ void Session::__doRead() {
 }
 void Session::__onRead(beast::error_code ec, std::size_t bytes_transferred) 
 {
-    std::cout << "METHOD onRead" << std::endl;
     boost::ignore_unused(bytes_transferred);
 
     // This means they closed the connection
@@ -89,7 +85,6 @@ void Session::__onRead(beast::error_code ec, std::size_t bytes_transferred)
         __is_live = false;
         return;
     }
-
     // Send the response
     
     __analizeRequest();
@@ -108,8 +103,6 @@ void Session::__onWrite(bool keep_alive, beast::error_code ec, std::size_t bytes
         __is_live = false;
         return fail(ec, "write");
     }
-        
-
     if (!keep_alive)
     {
         // This means we should close the connection, usually because
@@ -195,7 +188,7 @@ void Session::__analizeRequest()
     __body_request = __parser.release();
 
     if (__sessions_marusia->size() == 0) {
-        std::cerr << "__session_marussia size = 0" << std::endl;
+        Logger::writeLog("https_server Session", "__analizeRequest", Logger::log_message_t::ERROR, "__session_marussia size = 0");
         __callbackWorkerMarussia({});
         return;
     }
@@ -309,14 +302,14 @@ void Session::__analizeRequest()
             boost::bind(&Session::__callbackWorkerMarussia, this, _1));
     }
     catch (std::exception& e) {
-        std::cerr << "__analizeRequest: " << e.what() << std::endl;
+        Logger::writeLog("https_server Session", "__analizeRequest",Logger::log_message_t::ERROR, e.what());
         __callbackWorkerMarussia({{"target", "application_not_found"}});
     }
     
 }
 http::message_generator Session::__badRequest(beast::string_view why) {
     __is_live = false;
-    std::cout << "ERROR " << why << std::endl;
+    Logger::writeLog("https_server Session", "__analizeRequest",Logger::log_message_t::ERROR, std::string("ERROR ") + why.data());
     http::response<http::string_body> res{http::status::bad_request, __req.version()};
     res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
     res.set(http::field::content_type, "application/json;charset=utf-8");
@@ -334,7 +327,7 @@ void Session::__callbackWorkerMarussia(boost::json::value data) {
         target = data.at("target");
     }
     catch (std::exception& e) {
-        std::cout << "__callbackWorkerMarussia [target]: " << e.what();
+        Logger::writeLog("https_server Session", "__callbackWorkerMarussia",Logger::log_message_t::ERROR, std::string("[target]: ") + e.what());
         target = "error";
     };
     /*------------*/
@@ -360,7 +353,7 @@ void Session::__callbackWorkerMarussia(boost::json::value data) {
         }
     }
     catch (std::exception& e) {
-        std::cerr << "__callbackWorkerMarussia [target analize]: " << e.what() << std::endl;
+        Logger::writeLog("https_server Session", "__callbackWorkerMarussia",Logger::log_message_t::ERROR, std::string("[target analize]: ") + e.what());
         target = "error";
     };
     /*------------*/

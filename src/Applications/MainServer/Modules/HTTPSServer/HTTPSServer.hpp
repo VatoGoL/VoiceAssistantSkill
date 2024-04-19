@@ -49,7 +49,7 @@ namespace https_server {
 
         std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> __sessions_marusia;
 
-        std::shared_ptr< std::shared_ptr<std::map<std::string, std::vector<std::string>>>> __sp_db_marusia_station;
+        std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> __sp_db_marusia_station;
 
         long __pos_ms_field = 0;
         long __pos_lb_field = 0;

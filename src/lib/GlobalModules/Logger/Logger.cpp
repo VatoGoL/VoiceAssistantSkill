@@ -30,7 +30,7 @@ void Logger::init(std::string path_to_log_directory, std::string directory, erro
 	
 	__fout.open(__filename, std::ofstream::app);
 	if(!__fout.is_open()){
-		throw error_logger_t::FILE_OPEN;
+		throw error_logger_t::FILE_NOT_OPEN;
 	}
 	__fout.close();
 }
@@ -75,7 +75,7 @@ void Logger::__writeLogQueue()
 
 	__fout.open(__filename, std::ofstream::app);
 	if(!__fout.is_open()){
-		__error_callback(FILE_OPEN, "log file" + __filename + "not open");
+		__error_callback(FILE_NOT_OPEN, "log file" + __filename + "not open");
 		return;
 	}
 
@@ -90,7 +90,7 @@ void Logger::__writeLogQueue()
 void Logger::__defaultErrorCallback(error_logger_t error_type, std::string message)
 {
 	switch(error_type){
-		case FILE_OPEN:
+		case FILE_NOT_OPEN:
 			std::cerr << "ERROR! Logger - __defaultErrorCallback: file not open, message: " + message << std::endl;
 			break;
 	}

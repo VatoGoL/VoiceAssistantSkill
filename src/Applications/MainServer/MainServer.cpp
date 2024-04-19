@@ -7,45 +7,58 @@ MainServer::~MainServer() {
 }
 MainServer::PROCESS_CODE MainServer::init(std::string path_to_config_file) {
 
-	__logger = std::make_shared<Logger>("","./","MainServer");
-	__configer = std::make_shared<Configer>(__logger, "./", path_to_config_file);
-	__configer->readConfig();
+	try{
+		Logger::init();
+		Configer::init("./",path_to_config_file);
+	}catch(Logger::error_logger_t &e){
+		switch(e){
+			case Logger::error_logger_t::FILE_NOT_OPEN:
+				return LOG_FILE_NOT_OPEN;
+			break;
+			default:
+				return UNKNOWN_ERROR;
+			break;
+		}
+	}catch(Configer::error_configer_t &e){
+		switch(e){
+			case Configer::error_configer_t::FILE_NOT_OPEN:
+				return CONFIG_FILE_NOT_OPEN;
+			break;
+			default:
+				return UNKNOWN_ERROR;
+			break;
+		}
+	}
+	
+	Configer::readConfig();
 	__ssl_ctx = std::make_shared<boost::asio::ssl::context>(boost::asio::ssl::context::tlsv12);
 
-	std::map<std::string, std::string> configuration = __configer->getConfigInfo();
+	std::map<std::string, std::string>& configuration = Configer::getConfigInfo();
 	try {
-		if (configuration.size() == 0) {
-			return CONFIG_FILE_NOT_OPEN;
-		}
 		__db_ip = configuration.at("DB_ip");
 		__db_login = configuration.at("DB_login");
 		__db_password = configuration.at("DB_password");
 		__port_db = stoi(configuration.at("DB_port"));
 		__port_marusia_station = stoi(configuration.at("Marusia_port"));
-		__port_mqtt = stoi(configuration.at("MQTT_port"));
-		__port_worker_mqtt = stoi(configuration.at("Worker_MQTT_port"));;
-		__port_worker_mqtt_info = stoi(configuration.at("Worker_MQTT_info_port"));
 		__port_worker_marusia = stoi(configuration.at("Worker_marusia_port"));
 		__count_threads = stoi(configuration.at("Count_threads"));
 		if(load_server_certificate(*__ssl_ctx, configuration.at("Path_to_ssl_sertificate"),configuration.at("Path_to_ssl_key")) == -1){
-			throw std::invalid_argument("Lead sertificate error");
+			Logger::writeLog("MainServer","init",Logger::log_message_t::ERROR,"Load sertificate error");
+			return PROCESS_CODE::CONFIG_DATA_NOT_CORRECT; 
 		}
-		if (__port_marusia_station < 1 || __port_mqtt < 1 || __port_worker_mqtt < 1 ||
-			__port_worker_mqtt_info < 1 || __port_worker_marusia < 1 || __count_threads < 1) 
+		if (__port_marusia_station < 1 || __port_worker_marusia < 1 || __count_threads < 1) 
 		{
-			//throw exception("Port <= 0");
-			throw std::invalid_argument("Port <= 0");
+			Logger::writeLog("MainServer","init",Logger::log_message_t::ERROR,"Port <= 0");
+			return PROCESS_CODE::CONFIG_DATA_NOT_CORRECT;
 		}
 	}
-	catch (std::invalid_argument& e) {
-		std::cerr << e.what() << std::endl;
+	catch (std::exception& e) {
+		Logger::writeLog("MainServer","init",Logger::log_message_t::ERROR,e.what());
 		return PROCESS_CODE::CONFIG_DATA_NOT_FULL;
 	}
 	
 	__io_ctx = std::make_shared<boost::asio::io_context>(__count_threads);
 	
-	
-	//__server_w_mqtt = std::make_shared<worker_server::Server>(__io_ctx, __port_worker_mqtt_info,worker_server::WORKER_MQTT_T);
 	__server_w_marusia = std::make_shared<worker_server::Server>(__io_ctx, __port_worker_marusia, worker_server::WORKER_MARUSIA_T);
 	__server_https = std::make_shared<https_server::Listener>(*__io_ctx, *__ssl_ctx,configuration.at("Path_to_ssl_sertificate"),configuration.at("Path_to_ssl_key"),__port_marusia_station, __server_w_marusia->getSessions());
 	__client_db = std::make_shared<ClientDB>(__db_ip, std::to_string(__port_db), __db_login, __db_password, 
@@ -53,7 +66,7 @@ MainServer::PROCESS_CODE MainServer::init(std::string path_to_config_file) {
 										bind(&MainServer::__updateDataCallback, this,_1));
 		
 	__update_timer = std::make_shared<boost::asio::deadline_timer>(*__io_ctx);
-	//__server_mqtt_repeater = make_shared<net_repeater::Server>(__io_ctx, __port_mqtt, __server_w_mqtt->getSessions());
+	
 	return PROCESS_CODE::SUCCESSFUL;
 }
 void MainServer::stop(){
@@ -73,13 +86,13 @@ void MainServer::start() {
 	__io_ctx->run();
 }
 void MainServer::__startServers(std::map<std::string, std::map<std::string, std::vector<std::string>>> data) {
-	std::cout << "Start servers" << std::endl;
+	Logger::writeLog("MainServer", "__start_Servers",Logger::log_message_t::EVENT, "Start servers");
 	
 	try {
 		__updateData(data);
 	}
 	catch (std::exception& e) {
-		std::cerr << "StartServers: " << e.what() << std::endl;
+		Logger::writeLog("MainServer", "__start_Servers",Logger::log_message_t::ERROR, e.what());
 		return;
 	}
 	
@@ -127,7 +140,7 @@ void MainServer::__updateDataCallback(std::map<std::string, std::map<std::string
 		__updateData(data);
 	}
 	catch (std::exception& e) {
-		std::cerr << "__updateDataCallback: " << e.what();
+		Logger::writeLog("MainServer", "__updateDataCallback",Logger::log_message_t::ERROR, e.what());
 		return;
 	}
 }

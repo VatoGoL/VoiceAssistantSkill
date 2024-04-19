@@ -6,6 +6,7 @@
 #include <boost/asio.hpp>
 #include <boost/json.hpp>
 #include <queue>
+#include <GlobalModules/Logger/Logger.hpp>
 #include "../../../../lib/GlobalModules/JSONFormatter/JSONFormatter.hpp"
 //#include <GlobalModules/JSONFormatter/JSONFormatter.hpp>
 //using namespace std;
@@ -58,9 +59,6 @@ namespace worker_server {
     /*-----------------------------------------------------------------------------------*/
     class Session : public std::enable_shared_from_this<Session>, protected ISession {
     public:
-        enum COMMAND_CODE_MQTT {
-            MOVE_LIFT = 1
-        };
         enum COMMAND_CODE_MARUSIA {
             MARUSIA_STATION_REQUEST = 1
         };
@@ -93,7 +91,6 @@ namespace worker_server {
         virtual bool isLive() override;
         virtual std::string getId() override;
 
-        virtual void startCommand(COMMAND_CODE_MQTT command_code, void* command_parametr, _callback_t callback);
         virtual void startCommand(COMMAND_CODE_MARUSIA command_code, void* command_parametr, _callback_t callback);
     };
     /*-----------------------------------------------------------------------------------*/

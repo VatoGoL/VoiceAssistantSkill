@@ -27,7 +27,7 @@ public:
     };
     enum error_logger_t
     {
-        FILE_OPEN = 1,
+        FILE_NOT_OPEN = 1,
         CHECK_FILESIZE
     };
 
