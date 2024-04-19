@@ -20,22 +20,28 @@ int main(int argc, char* argv[])
     switch(app.init()){
         case MarusiaWorker::PROCESS_CODE::UNKNOWN_ERROR:
             std::cerr << "ERROR! app init: unknown error" << std::endl;
-        break;
+            return EXIT_FAILURE;
+            break;
         case MarusiaWorker::PROCESS_CODE::LOG_FILE_NOT_OPEN:
             std::cerr << "ERROR! app init: log file not open" << std::endl;
-        break;
+            return EXIT_FAILURE;
+            break;
         case MarusiaWorker::PROCESS_CODE::CONFIG_FILE_NOT_OPEN:
             std::cerr << "ERROR! app init: config file not open" << std::endl;
-        break;
+            return EXIT_FAILURE;
+            break;
         case MarusiaWorker::PROCESS_CODE::CONFIG_DATA_NOT_FULL:
             std::cerr << "ERROR! app init: config data not full" << std::endl;
-        break;
+            return EXIT_FAILURE;
+            break;
         case MarusiaWorker::PROCESS_CODE::CONFIG_DATA_NOT_CORRECT:
             std::cerr << "ERROR! app init: config data not correct" << std::endl;
-        break;
+            return EXIT_FAILURE;
+            break;
         case MarusiaWorker::PROCESS_CODE::SUCCESSFUL:
             app.run();
         break;
     }
 	
+    return EXIT_SUCCESS;
 }
