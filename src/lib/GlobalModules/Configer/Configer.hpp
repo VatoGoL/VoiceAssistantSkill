@@ -13,9 +13,6 @@
 #include <fstream>
 #include <GlobalModules/Logger/Logger.hpp>
 
-
-
-
 class Configer
 {
 public:

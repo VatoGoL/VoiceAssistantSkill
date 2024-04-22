@@ -17,7 +17,7 @@ public:
     static const std::string PREFIX;
     static const std::string POSTFIX;
     static const size_t MAX_FILESIZE;
-    static const uint8_t MAX_COUNT_MESSAGE_IN_QUEUE;
+    static const uint8_t DEFAULT_MAX_COUNT_MESSAGE_IN_QUEUE;
 
     enum log_message_t
     {
@@ -35,7 +35,8 @@ public:
 
     Logger() = default;
     ~Logger();
-    static void init(std::string path_to_log_directory = DEFAULT_PATH, 
+    static void init(uint8_t max_queue_size = DEFAULT_MAX_COUNT_MESSAGE_IN_QUEUE,
+                     std::string path_to_log_directory = DEFAULT_PATH, 
                      std::string directory = DEFAULT_DIRECTORY,
                      error_func_t error_callback = std::bind(&Logger::__defaultErrorCallback,std::placeholders::_1,std::placeholders::_2));
     
@@ -54,4 +55,9 @@ private:
     static std::queue<std::string> __message_log_queue;
 
     static std::ofstream __fout;
+    static uint8_t __max_queue_size;
+
+    static const int __BUFFER_TIME_SIZE;
+    static char __buffer_time[];
+    static std::timespec __time_now;
 };

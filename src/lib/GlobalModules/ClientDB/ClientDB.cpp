@@ -1,22 +1,23 @@
 #include "ClientDB.hpp"
 
-ClientDB::ClientDB( std::string ip_dB, std::string port_dB, 
-                    std::string worker_log, std::string worker_pass, 
+ClientDB::ClientDB( std::string ip_dB, int port_dB, 
+                    std::string worker_login, std::string worker_password, 
                     std::string name_sender, std::shared_ptr<tcp::socket> socket, ClientDB::callback_t callback)
 {
     __callback_f = callback;
-    __end_point = std::make_shared<tcp::endpoint>(tcp::endpoint(net::ip::address::from_string(ip_dB), stoi(port_dB)));
+    __end_point = std::make_shared<tcp::endpoint>(tcp::endpoint(net::ip::address::from_string(ip_dB), port_dB));
     __socket = socket;
     __buf_recive = new char[BUF_RECIVE_SIZE + 1];
     std::fill_n(__buf_recive, BUF_RECIVE_SIZE, 0);
     __buf_json_recive = {};
     __parser.reset();
-    __worker_login = worker_log;
-    __worker_password = worker_pass;
+    __worker_login = worker_login;
+    __worker_password = worker_password;
     __name_sender = name_sender;
     __flag_conditions = false;
 
 }
+
 ClientDB::~ClientDB()
 {
     
@@ -33,8 +34,6 @@ void ClientDB::stop()
 {
     try
     {
-        //__socket->shutdown(tcp::socket::shutdown_send);
-        //__socket->shutdown(tcp::socket::shutdown_receive);
         if (__socket->is_open())
         {
             __socket->close();
@@ -42,7 +41,7 @@ void ClientDB::stop()
     }
     catch (std::exception& e)
     {
-        std::cerr << "stop operation DB " << e.what() << std::endl;
+        Logger::writeLog("ClientDB","stop",Logger::log_message_t::ERROR,e.what());
     }
 }
 void ClientDB::setQuerys( std::queue<std::string> queue_tables, std::queue<std::vector<std::string>> queue_fields, 
@@ -54,11 +53,9 @@ void ClientDB::setQuerys( std::queue<std::string> queue_tables, std::queue<std::
     if(!queue_conditions.empty())
     {
         __queue_conditions = queue_conditions;
-        //cerr << "cond " << __queue_conditions.size() << " tables" << __queue_tables.size() << endl;
         if (__queue_conditions.size() != __queue_tables.size())
         {
-            std::cerr << "setQuerys" << std::endl;
-            std::cerr << "ERROR, Not full conditions WHERE( if WHERE is not needed, put " ")";
+            Logger::writeLog("ClientDB","setQuerys",Logger::log_message_t::ERROR, "ERROR, Not full conditions WHERE( if WHERE is not needed, put )");
             this->stop();
         }
         else
@@ -89,7 +86,6 @@ void ClientDB::__checkConnect(const boost::system::error_code& error_code)
         #else
             Sleep(2000);
         #endif
-        std::cerr << "__checkConnect" << std::endl;
         this->stop();
         this->start();
         return;
@@ -98,8 +94,6 @@ void ClientDB::__checkConnect(const boost::system::error_code& error_code)
     {
         if (__flag_disconnect == true)
         {
-            std::cerr << "no connect" << std::endl;
-            std::cerr << "__checkConnect" << std::endl;
             this->stop();
         }
         else
@@ -153,7 +147,7 @@ void ClientDB::__queryGenerator()
     }
     else
     {
-        std::cerr << "__queryGenerator()" << std::endl;
+        Logger::writeLog("ClientDB","__queryGenerator",Logger::log_message_t::EVENT,"disconnect");
         __callback_f(__resp_data);
         this->stop();
     }
@@ -162,7 +156,7 @@ void ClientDB::__sendCommand(const boost::system::error_code& error_code, size_t
 {
     if (error_code)
     {
-        std::cerr << "sendConnect" << error_code.what() << std::endl;
+        Logger::writeLog("ClientDB","__sendCommand",Logger::log_message_t::ERROR,error_code.message());
         this->stop();
         this->start();
         return;
@@ -186,7 +180,7 @@ void ClientDB::__reciveCommand(const boost::system::error_code& error_code, size
 {
     if (error_code)
     {
-        std::cerr << "reciveCommand " << error_code.what() << std::endl;
+        Logger::writeLog("ClientDB","__reciveCommand",Logger::log_message_t::ERROR,error_code.message());
         this->stop();
         this->start();
         return;
@@ -204,7 +198,7 @@ void ClientDB::__reciveCommand(const boost::system::error_code& error_code, size
     std::fill_n(__buf_recive, BUF_RECIVE_SIZE, 0);
 
     if (!__parser.done()) {
-        std::cerr << "connectAnalize json not full" << std::endl;
+        Logger::writeLog("ClientDB","__reciveCommand",Logger::log_message_t::EVENT,"JSON not full");
         __socket->async_receive(boost::asio::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&ClientDB::__reciveCommand, shared_from_this(),
             boost::placeholders::_1, boost::placeholders::_2));
         return;
@@ -217,7 +211,7 @@ void ClientDB::__reciveCommand(const boost::system::error_code& error_code, size
     catch (std::exception& e) {
         __parser.reset();
         __buf_json_recive = {};
-        std::cerr << "_reciveCheck " << e.what() << std::endl;
+        Logger::writeLog("ClientDB","__reciveCommand",Logger::log_message_t::ERROR,e.what());
         return;
     }
     __commandAnalize(error_code);

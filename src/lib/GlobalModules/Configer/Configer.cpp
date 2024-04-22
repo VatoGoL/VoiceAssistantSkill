@@ -1,6 +1,12 @@
 #include "Configer.hpp"
 
-const std::string CONFIG_FILE = "config.txt";
+const std::string Configer::CONFIG_FILE = "config.txt";
+Configer::error_func_t Configer::__callback;
+std::string Configer::__root_directory;
+std::string Configer::__way;
+std::string Configer::__file_name;
+std::string Configer::__final_path;
+std::map<std::string, std::string> Configer::__config_info;
 
 void Configer::init(std::string root_directory, std::string way, std::string file_name, error_func_t callback)
 {

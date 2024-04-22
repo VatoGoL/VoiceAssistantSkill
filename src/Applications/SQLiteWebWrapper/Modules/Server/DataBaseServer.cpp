@@ -424,10 +424,9 @@ int DataBase::__connection(void* answer, int argc, char** argv, char** az_col_na
         std::cerr << e.what() << std::endl;
     }
 }
-DataBase::DataBase(std::shared_ptr<Logger> lg, tcp::socket sock)
+DataBase::DataBase(tcp::socket sock)
 {
     __socket = std::make_shared<tcp::socket>(std::move(sock));
-    __log = lg;
     __buf_recieve = new char[BUF_SIZE + 1];
 
     __buf_send = "";
@@ -498,6 +497,7 @@ Server::PROCESS_CODE Server::init()
     __sessions = std::make_shared<std::vector<std::shared_ptr<DataBase>>>();
     __acceptor = std::make_shared<boost::asio::ip::tcp::acceptor>(*__ioc, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port));
     __timer = std::make_shared<net::deadline_timer>(*__ioc);
+    return SUCCESSFUL;
 }
 void Server::run()
 {

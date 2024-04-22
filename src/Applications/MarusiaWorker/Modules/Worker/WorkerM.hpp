@@ -1,5 +1,7 @@
 #pragma once
 
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
+
 #include <GlobalModules/Logger/Logger.hpp>
 #include <GlobalModules/Configer/Configer.hpp>
 #include <GlobalModules/JSONFormatter/JSONFormatter.hpp>
@@ -45,7 +47,7 @@ public:
 	typedef std::function<void(std::map<std::string, std::map<std::string, std::vector<std::string>>> )> _callback_t;
 	_callback_t callback;
 
-	void __сallback(std::map<std::string, std::map<std::string, std::vector<std::string>>> data);
+	
 
 	WorkerM(net::io_context& ioc);
 	~WorkerM();
@@ -107,7 +109,7 @@ private:
 	void __sendConnect(const boost::system::error_code& eC);
 	void __reciveConnect(const boost::system::error_code& eC, size_t bytes_send);
 	void __reciveCommand(const boost::system::error_code& eC, size_t bytes_recive);
-	
+	void __сallback(std::map<std::string, std::map<std::string, std::vector<std::string>>> data);
 
 	void __sendResponse(const boost::system::error_code& eC, size_t bytes_recive);
 	void __reciveAnswer(const boost::system::error_code& eC, size_t bytes_send);

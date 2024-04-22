@@ -35,7 +35,7 @@ ServerDataBase::PROCESS_CODE ServerDataBase::init(std::string config_way, std::s
     }
     
     __ioc = std::make_shared<boost::asio::io_context>(__count_threads);
-    __server = std::make_shared<Server>(__ioc, "");
+    __server = std::make_shared<Server>(__ioc);
     switch(__server->init()){
         case Server::UNKNOWN_ERROR:
             return UNKNOWN_ERROR;

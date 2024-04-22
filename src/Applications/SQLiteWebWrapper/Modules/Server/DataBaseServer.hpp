@@ -1,5 +1,7 @@
 #pragma once
 
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
+
 #include "/media/vato/6c438f7c-3d6e-47b1-8c02-ca9aa1dc9ba2/vato/Vato/Diplom/SQLiteLib/SQLiteAPI/sqlite3.h"
 #include <GlobalModules/JSONFormatter/JSONFormatter.hpp>
 #include <GlobalModules/Logger/Logger.hpp>
@@ -49,7 +51,6 @@ private:
 	sqlite3* __dB;
 	std::string __query;
 	std::string __error_what;
-	std::shared_ptr<Logger> __log;
 	std::map<std::string, std::vector<std::string>> __answer;
 	bool __flag_wrong_connect = false;
 	bool __flag_send = false;
@@ -72,7 +73,7 @@ private:
 	static int __connection(void* answer, int argc, char** argv, char** az_col_name);
 
 public:
-	DataBase(std::shared_ptr<Logger> lg, tcp::socket sock);
+	DataBase(tcp::socket sock);
 	void start();
 	void stop();
 	~DataBase();

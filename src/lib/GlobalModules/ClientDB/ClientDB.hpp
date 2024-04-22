@@ -1,6 +1,7 @@
 #pragma once
 
 #include <GlobalModules/JSONFormatter/JSONFormatter.hpp>
+#include <GlobalModules/Logger/Logger.hpp>
 #include <boost/lambda2.hpp>
 #include <boost/asio.hpp>
 #include <boost/json.hpp>
@@ -30,13 +31,17 @@ using tcp = boost::asio::ip::tcp;
 class ClientDB : public std::enable_shared_from_this<ClientDB>
 {
 public:
-	
+	enum PROCESS_CODE {
+		SUCCESSFUL = 0,
+		UNKNOWN_ERROR
+	};
 	typedef std::function<void(std::map<std::string, std::map<std::string, std::vector<std::string>>>)> callback_t;
 
-	ClientDB(std::string ip_dB, std::string port_dB, 
-             std::string worker_log, std::string worker_pass, 
+	ClientDB(std::string ip_dB, int port_dB, 
+             std::string worker_login, std::string worker_password, 
              std::string name_sender, std::shared_ptr<tcp::socket> socket, callback_t callback);
 	~ClientDB();
+	PROCESS_CODE init();
 	void start();
 	void stop();
 	void setQuerys(std::queue<std::string> queue_tables, std::queue<std::vector<std::string>> queue_fields, 
