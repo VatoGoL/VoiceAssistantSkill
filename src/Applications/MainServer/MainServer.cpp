@@ -96,7 +96,7 @@ void MainServer::__startServers(std::map<std::string, std::map<std::string, std:
 		return;
 	}
 	
-	__client_db->setCallback(bind(&MainServer::__updateDataCallback, this, _1));
+	__client_db->setCallback(boost::bind(&MainServer::__updateDataCallback, this, _1));
 	__update_timer->expires_from_now(boost::posix_time::seconds(__TIME_UPDATE));
 	__update_timer->async_wait(boost::bind(&MainServer::__updateTimerCallback, this, _1));
 	
@@ -106,20 +106,16 @@ void MainServer::__startServers(std::map<std::string, std::map<std::string, std:
 void MainServer::__loadDataBase() {
 	__client_db->setCallback(bind(&MainServer::__startServers, this, _1));
 	
-	__table_name.push("WorkerMarussia");
-	__table_fields.push({"Id"});
+	__table_name.push("InterestingFact");
+	__table_fields.push({"fact"});
 	__table_conditions.push("");
 	
-	__table_name.push("WorkerLU");
-	__table_fields.push({ "Id", "Address", "Port"});
+	__table_name.push("UniversityFact");
+	__table_fields.push({"fact"});
 	__table_conditions.push("");
 
-	__table_name.push("MarussiaStation");
-	__table_fields.push({ "ApplicationId", "WorkerId", "SecondWorkerId", "LiftBlockId"});
-	__table_conditions.push("");
-
-	__table_name.push("LiftBlocks");
-	__table_fields.push({ "Id", "WorkerLuId", "SecondWorkerLuId", "Descriptor"});
+	__table_name.push("DirectionOfPreparation");
+	__table_fields.push({ "direction", "number_of_budget_positions", "minimum_score"});
 	__table_conditions.push("");
 
 	__client_db->setQuerys(__table_name, __table_fields, __table_conditions);
