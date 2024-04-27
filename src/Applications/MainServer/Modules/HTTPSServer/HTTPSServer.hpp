@@ -47,9 +47,7 @@ namespace https_server {
         json::object __body_response;
         bool __is_live = false;
 
-        std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> __sessions_marusia;
-
-        std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> __sp_db_marusia_station;
+        std::weak_ptr<std::vector<worker_server::Session>> __sessions_marusia;
 
         long __pos_ms_field = 0;
         long __pos_lb_field = 0;
@@ -68,8 +66,7 @@ namespace https_server {
             ssl::context& ssl_ctx,
             std::string path_to_ssl_certificate,
             std::string path_to_ssl_key,
-            std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_marussia,
-            std::shared_ptr< std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_marusia_station);
+            std::weak_ptr<std::vector<worker_server::Session>> sessions_marussia);
         ~Session();
         void run();
         bool isLive();
@@ -100,12 +97,10 @@ namespace https_server {
         net::io_context& __io_ctx;
         ssl::context& __ssl_ctx;
         std::shared_ptr<tcp::acceptor> __acceptor;
-        std::shared_ptr<std::vector<std::shared_ptr<https_server::Session>>> __sessions;
+        std::shared_ptr<std::vector<https_server::Session>> __sessions;
         std::shared_ptr<boost::asio::deadline_timer> __timer_kill;
 
-        std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> __sessions_marussia;
-
-        std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> __sp_db_marusia_station;
+        std::weak_ptr<std::vector<worker_server::Session>> __sessions_marussia;
 
         std::string __path_to_ssl_certificate;
         std::string __path_to_ssl_key;
@@ -115,8 +110,8 @@ namespace https_server {
                   std::string path_to_ssl_certificate,
                   std::string path_to_ssl_key,
                   unsigned short port,
-                  std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_marussia);
-        void start(std::shared_ptr< std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_marusia_station);
+                  std::weak_ptr<std::vector<worker_server::Session>> sessions_marussia);
+        void start();
     
     private:
         void __onAccept(beast::error_code ec, tcp::socket socket);

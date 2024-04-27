@@ -26,8 +26,8 @@ namespace worker_server {
         };
         typedef std::function<void(boost::system::error_code, std::size_t)> _handler_t;
 
-        static const int _BUF_RECIVE_SIZE = 2048;
-        const int _PING_TIME = 10;
+        static const int _BUF_RECIVE_SIZE;
+        static const int _PING_TIME;
         std::string _id;
         std::string _sender;
         std::string _buf_send;
@@ -55,7 +55,8 @@ namespace worker_server {
         virtual bool isLive() = 0;
         virtual std::string getId() = 0;
     };
-
+    const int ISession::_BUF_RECIVE_SIZE = 2048;
+    const int ISession::_PING_TIME = 10;
     /*-----------------------------------------------------------------------------------*/
     class Session : public std::enable_shared_from_this<Session>, protected ISession {
     public:
@@ -70,8 +71,11 @@ namespace worker_server {
         boost::asio::ip::tcp::socket _socket;
         boost::asio::deadline_timer _ping_timer;
         boost::asio::deadline_timer _dead_ping_timer;
-        std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> _sp_db_worker_ids;
         _callback_t _callback;
+        
+        int _active_sessions;
+        void _updateCountSessions();
+        
 
         virtual void _autorization() override;
         virtual _CHECK_STATUS _reciveCheck(const size_t& count_recive_byte, _handler_t&& handler) override;
@@ -83,13 +87,15 @@ namespace worker_server {
         virtual void _analizePing() override;
         virtual void _deadPing(const boost::system::error_code& error) override;
     public:
-        Session(std::string sender, boost::asio::ip::tcp::socket& socket, std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_worker_ids, boost::asio::deadline_timer ping_timer, boost::asio::deadline_timer dead_ping_timer);
+        static const uint8_t MAX_ACTIVE_SESSIONS;
+        Session(std::string sender, boost::asio::ip::tcp::socket& socket, boost::asio::deadline_timer ping_timer, boost::asio::deadline_timer dead_ping_timer);
         virtual ~Session();
 
         virtual void start() override;
         virtual void stop() override;
         virtual bool isLive() override;
         virtual std::string getId() override;
+        const int& getActiveSessions();
 
         virtual void startCommand(COMMAND_CODE_MARUSIA command_code, void* command_parametr, _callback_t callback);
     };
@@ -102,6 +108,7 @@ namespace worker_server {
     private:
         void __staticMessage();
         void __moveLift();
+        
     protected:
         virtual void _commandAnalize() override;
     public:
@@ -109,7 +116,8 @@ namespace worker_server {
             std::string station_id = "";
             boost::json::value body = {};
         };
-        SessionMarusia(std::string sender, boost::asio::ip::tcp::socket& socket, std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_worker_marusia,boost::asio::deadline_timer ping_timer, boost::asio::deadline_timer dead_ping_timer);
+        SessionMarusia(std::string sender, boost::asio::ip::tcp::socket& socket,
+                       boost::asio::deadline_timer ping_timer, boost::asio::deadline_timer dead_ping_timer);
         virtual ~SessionMarusia();
         void startCommand(COMMAND_CODE_MARUSIA command_code, void* command_parametr, _callback_t callback);
     };
@@ -122,17 +130,16 @@ namespace worker_server {
         WORKER_T __worker_type;
         std::string __sender;
         std::shared_ptr <boost::asio::ip::tcp::acceptor> __acceptor;
-        std::shared_ptr <boost::asio::io_context> __context;
+        std::weak_ptr <boost::asio::io_context> __context;
         std::shared_ptr<std::vector<std::shared_ptr<Session>>> __sessions;
         std::shared_ptr<boost::asio::deadline_timer> __kill_timer;
-        std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> __sp_db_worker_ids;
 
         void __accept();
         void __killSession(const boost::system::error_code& error);
     public:
-        Server(std::shared_ptr < boost::asio::io_context> io_context, unsigned short port, WORKER_T worker_type, std::string sender = "Main_server");
+        Server(std::weak_ptr < boost::asio::io_context> io_context, unsigned short port, WORKER_T worker_type, std::string sender = "Main_server");
         ~Server();
-        void start(std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_worker_ids);
+        void start();
         void stop();
         std::shared_ptr<std::vector<std::shared_ptr<Session>>> getSessions();
     };

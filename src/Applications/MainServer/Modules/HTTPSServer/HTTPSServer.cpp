@@ -17,11 +17,9 @@ Session::Session(tcp::socket&& socket,
     ssl::context& ssl_ctx,
     std::string path_to_ssl_certificate,
     std::string path_to_ssl_key,
-    std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_marussia,
-    std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_marusia_station)
+    std::weak_ptr<std::vector<worker_server::Session>> sessions_marussia)
     : __stream(std::move(socket), ssl_ctx), __ssl_ctx(ssl_ctx)
 {
-    __sp_db_marusia_station = sp_db_marusia_station;
     __sessions_marusia = sessions_marussia;
     __path_to_ssl_certificate = path_to_ssl_certificate;
     __path_to_ssl_key = path_to_ssl_key;
@@ -186,126 +184,32 @@ void Session::__analizeRequest()
         return;
     }
     __body_request = __parser.release();
-
-    if (__sessions_marusia->size() == 0) {
-        Logger::writeLog("https_server Session", "__analizeRequest", Logger::log_message_t::ERROR, "__session_marussia size = 0");
+    auto sp_sessions_marusia = __sessions_marusia.lock();
+    
+    if (sp_sessions_marusia->size() == 0) {
+        Logger::writeLog("https_server Session", "__analizeRequest", Logger::log_message_t::WARNING, "__session_marussia size = 0");
         __callbackWorkerMarussia({});
         return;
     }
-    try {
-        bool search_successful = false;
-        
-        std::string application_id = "\"" + std::string(__body_request.at("session").at("application").at("application_id").as_string().c_str()) + "\"";
-        if ((*__sp_db_marusia_station)->at("ApplicationId")[__pos_ms_field] != application_id) {
-            __pos_ms_field = 0;
-            for (auto i = (*__sp_db_marusia_station)->at("ApplicationId").begin(), end = (*__sp_db_marusia_station)->at("ApplicationId").end(); i != end; i++) {
-                if (application_id == (*i)) {
-                    search_successful = true;
-                    break;
-                }
-                __pos_ms_field++;
-            }
+    
+    __pos_worker_marusia = 0;
+    for(auto i = sp_sessions_marusia->begin(), end_i = sp_sessions_marusia->end(); i != end_i; i++)
+    {
+        if(i->getActiveSessions() < worker_server::Session::MAX_ACTIVE_SESSIONS){
+            break;
         }
-        else { search_successful = true; }
-        
-        if (!search_successful) {
-            throw std::invalid_argument(std::string("application id not found: " + application_id).c_str());
-        }
-        /*-----------------------------------------*/
-        search_successful = false;
-
-        std::string worker_id = (*__sp_db_marusia_station)->at("WorkerId").at(__pos_ms_field);
-        std::string second_worker_id = (*__sp_db_marusia_station)->at("SecondWorkerId").at(__pos_ms_field);
-        
-        std::string temp_var;
-        try {
-            temp_var = __sessions_marusia->at(__pos_worker_marusia)->getId();
-            if (temp_var == worker_id || temp_var == second_worker_id) {
-                search_successful = true;
-            }
-            else {
-                throw std::invalid_argument("");
-            }
-        }
-        catch (std::exception& e) {
-            temp_var = "";
-            __pos_worker_marusia = 0;
-            for (auto i = __sessions_marusia->begin(), end = __sessions_marusia->end(); i != end; i++) {
-                temp_var = (*i)->getId();
-                if (temp_var == worker_id || temp_var == second_worker_id) {
-                    search_successful = true;
-                    break;
-                }
-                __pos_worker_marusia++;
-            }
-        }
-        
-        if (!search_successful) {
-            __callbackWorkerMarussia({});
-            return;
-        }
-        
-        /*-----------------------------------------*/
-        /*-----------------------------------------*/
-
-        search_successful = false;
-        std::string lb_id = (*__sp_db_marusia_station)->at("LiftBlockId")[__pos_ms_field];
-
-        /*if ((*__sp_db_lift_blocks)->at("Id")[__pos_lb_field] != lb_id) {
-            __pos_lb_field = 0;
-            for (auto i = (*__sp_db_lift_blocks)->at("Id").begin(), end = (*__sp_db_lift_blocks)->at("Id").end(); i != end; i++) {
-                if (lb_id == (*i)) {
-                    search_successful = true;
-                    break;
-                }
-                __pos_lb_field++;
-            }
-        }*/
-
-        search_successful = false;
-        //worker_id = (*__sp_db_lift_blocks)->at("WorkerLuId").at(__pos_lb_field);
-        //second_worker_id = (*__sp_db_lift_blocks)->at("SecondWorkerLuId").at(__pos_lb_field);
-        /*try {
-            temp_var = __sessions_mqtt->at(__pos_worker_lu)->getId();
-
-            if (temp_var == worker_id || temp_var == second_worker_id) {
-                search_successful = true;
-            }
-            else {
-                throw std::invalid_argument("");
-                //throw exception("");
-            }
-        }
-        catch (std::exception& e) {
-            temp_var = "";
-            __pos_worker_lu = 0;
-            for (auto i = __sessions_mqtt->begin(), end = __sessions_mqtt->end(); i != end; i++) {
-                temp_var = (*i)->getId();
-                if (temp_var == worker_id || temp_var == second_worker_id) {
-                    search_successful = true;
-                    break;
-                }
-                __pos_worker_lu++;
-            }
-        }*/
-
-        if (!search_successful) {
-            __callbackWorkerMarussia({});
-            return;
-        }
-
-        /*-----------------------------------------*/
+        __pos_worker_marusia++;
+    }
+    try{
         __request_marusia = {};
         __request_marusia.body = __body_request;
         __request_marusia.station_id = __body_request.at("session").at("application").at("application_id").as_string();
-        __sessions_marusia->at(__pos_worker_marusia)->startCommand(worker_server::Session::COMMAND_CODE_MARUSIA::MARUSIA_STATION_REQUEST, (void*)&__request_marusia,
+        sp_sessions_marusia->at(__pos_worker_marusia).startCommand(worker_server::Session::COMMAND_CODE_MARUSIA::MARUSIA_STATION_REQUEST, (void*)&__request_marusia,
             boost::bind(&Session::__callbackWorkerMarussia, this, _1));
-    }
-    catch (std::exception& e) {
+    }catch(std::exception &e){
         Logger::writeLog("https_server Session", "__analizeRequest",Logger::log_message_t::ERROR, e.what());
         __callbackWorkerMarussia({{"target", "application_not_found"}});
     }
-    
 }
 http::message_generator Session::__badRequest(beast::string_view why) {
     __is_live = false;
@@ -321,7 +225,6 @@ http::message_generator Session::__badRequest(beast::string_view why) {
 void Session::__callbackWorkerMarussia(boost::json::value data) {
     boost:json::value target;
     boost::json::object response_data = {};
-    //__request_mqtt = {};
 
     try {
         target = data.at("target");
@@ -334,18 +237,6 @@ void Session::__callbackWorkerMarussia(boost::json::value data) {
     try {
         if (target == "static_message") {
             response_data = data.at("response").at("response_body").as_object();
-        }
-        else if (target == "move_lift") {
-            /*if (__sessions_mqtt->size() == 0) {
-                throw std::invalid_argument("session mqtt size = 0");
-            }*/
-            /*__request_mqtt.station_id = data.at("response").at("station_id").as_string();
-            __request_mqtt.floor = std::stoi(data.at("response").at("mqtt_command").at("value").as_string().c_str());
-            __request_mqtt.lift_block_id = data.at("response").at("mqtt_command").at("lb_id").as_string();
-
-            __sessions_mqtt->at(__pos_worker_lu)->startCommand(worker_server::Session::COMMAND_CODE_MQTT::MOVE_LIFT, (void*)&(__request_mqtt),
-                boost::bind(&Session::__callbackWorkerMQTT, this, _1));
-            return;*/
         }
         else if(target == "application_not_found"){}
         else {
@@ -413,7 +304,7 @@ Listener::Listener( net::io_context& io_ctx,
                     std::string path_to_ssl_certificate,
                     std::string path_to_ssl_key,
                     unsigned short port,
-                    std::shared_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_marussia)
+                    std::weak_ptr<std::vector<worker_server::Session>> sessions_marussia)
                     : __io_ctx(io_ctx), __ssl_ctx(ssl_ctx)
 {
     
@@ -421,12 +312,11 @@ Listener::Listener( net::io_context& io_ctx,
 
     __sessions_marussia = sessions_marussia;
     __timer_kill = std::make_shared<boost::asio::deadline_timer>(io_ctx);
-    __sessions = std::make_shared<std::vector<std::shared_ptr<https_server::Session>>>();
+    __sessions = std::make_shared<std::vector<https_server::Session>>();
     __path_to_ssl_certificate = path_to_ssl_certificate;
     __path_to_ssl_key = path_to_ssl_key;
 } 
-void Listener::start(std::shared_ptr< std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_marusia_station) {
-    __sp_db_marusia_station = sp_db_marusia_station;
+void Listener::start() {
     __acceptor->async_accept(beast::bind_front_handler(&Listener::__onAccept, shared_from_this()));
     __timer_kill->expires_from_now(boost::posix_time::seconds(__TIME_DEAD_SESSION));
     __timer_kill->async_wait(beast::bind_front_handler(&Listener::__killSession,shared_from_this()));
@@ -435,7 +325,7 @@ void Listener::start(std::shared_ptr< std::shared_ptr<std::map<std::string, std:
 void Listener::__killSession(beast::error_code ec) {
     bool kill = false;
     for (auto i = __sessions->begin(); i != __sessions->end(); i++) {
-        if (!(*i)->isLive()) {
+        if (!(*i).isLive()) {
             __sessions->erase(i);
             kill = true;
             break;
@@ -459,21 +349,14 @@ void Listener::__onAccept(beast::error_code ec, tcp::socket socket) {
     else
     {
         // Create the session and run it
-        __sessions->push_back(std::make_shared<https_server::Session>(
+        __sessions->push_back(https_server::Session(
                                 std::move(socket),
                                 __ssl_ctx,
                                 __path_to_ssl_certificate,
                                 __path_to_ssl_key,
-                                __sessions_marussia, 
-                                __sp_db_marusia_station));
-        __sessions->back()->run();
-       /* std::make_shared<https_server::Session>(
-                                std::move(socket),
-                                __ssl_ctx,
-                                __path_to_ssl_certificate,
-                                __path_to_ssl_key,
-                                __sessions_mqtt, __sessions_marussia, 
-                                __sp_db_marusia_station, __sp_db_lift_blocks)->run();*/
+                                __sessions_marussia));
+        __sessions->back().run();
+      
     }
 
     // Accept another connection

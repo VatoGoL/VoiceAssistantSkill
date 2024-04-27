@@ -100,13 +100,13 @@ void MainServer::__startServers(std::map<std::string, std::map<std::string, std:
 	__update_timer->expires_from_now(boost::posix_time::seconds(__TIME_UPDATE));
 	__update_timer->async_wait(boost::bind(&MainServer::__updateTimerCallback, this, _1));
 	
-	__server_w_marusia->start(std::make_shared<std::shared_ptr<std::map<std::string, std::vector<std::string>>>>(__sp_db_worker_marusia));
-	__server_https->start(std::make_shared<std::shared_ptr<std::map<std::string, std::vector<std::string>>>>(__sp_db_marusia_station));
+	__server_w_marusia->start();
+	__server_https->start();
 }
 void MainServer::__loadDataBase() {
 	__client_db->setCallback(bind(&MainServer::__startServers, this, _1));
 	
-	__table_name.push("InterestingFact");
+	/*__table_name.push("InterestingFact");
 	__table_fields.push({"fact"});
 	__table_conditions.push("");
 	
@@ -116,20 +116,19 @@ void MainServer::__loadDataBase() {
 
 	__table_name.push("DirectionOfPreparation");
 	__table_fields.push({ "direction", "number_of_budget_positions", "minimum_score"});
-	__table_conditions.push("");
+	__table_conditions.push("");*/
 
 	__client_db->setQuerys(__table_name, __table_fields, __table_conditions);
 	__client_db->start();
 }
-void MainServer::__updateData(std::map<std::string, std::map<std::string, std::vector<std::string>>> &data) {
-	std::shared_ptr<std::map<std::string, std::vector<std::string>>> temp_sp_db_worker_marusia = std::make_shared<std::map<std::string, std::vector<std::string>>>(data.at("WorkerMarussia"));
-	std::shared_ptr<std::map<std::string, std::vector<std::string>>> temp_sp_db_worker_lu = std::make_shared<std::map<std::string, std::vector<std::string>>>(data.at("WorkerLU"));
-	std::shared_ptr<std::map<std::string, std::vector<std::string>>> temp_sp_db_marusia_station = std::make_shared<std::map<std::string, std::vector<std::string>>>(data.at("MarussiaStation"));
-	std::shared_ptr<std::map<std::string, std::vector<std::string>>> temp_sp_db_lift_blocks = std::make_shared<std::map<std::string, std::vector<std::string>>>(data.at("LiftBlocks"));
+void MainServer::__updateData(const std::map<std::string, std::map<std::string, std::vector<std::string>>> &data) {
+	std::shared_ptr<std::map<std::string, std::vector<std::string>>> temp_sp_db_interesting_fact = std::make_shared<std::map<std::string, std::vector<std::string>>>(data.at("InterestingFact"));
+	std::shared_ptr<std::map<std::string, std::vector<std::string>>> temp_sp_db_university_fact = std::make_shared<std::map<std::string, std::vector<std::string>>>(data.at("UniversityFact"));
+	std::shared_ptr<std::map<std::string, std::vector<std::string>>> temp_sp_db_direction_of_preparation = std::make_shared<std::map<std::string, std::vector<std::string>>>(data.at("DirectionOfPreparation"));
 	
-	__sp_db_worker_marusia = temp_sp_db_worker_marusia;
-	__sp_db_marusia_station = temp_sp_db_marusia_station;
-	__sp_db_lift_blocks = temp_sp_db_lift_blocks;
+	/*__sp_db_interesting_fact = temp_sp_db_interesting_fact;
+	__sp_db_university_fact = temp_sp_db_university_fact;
+	__sp_db_direction_of_preparation = temp_sp_db_direction_of_preparation;*/
 }
 void MainServer::__updateDataCallback(std::map<std::string, std::map<std::string, std::vector<std::string>>> data){
 	try {

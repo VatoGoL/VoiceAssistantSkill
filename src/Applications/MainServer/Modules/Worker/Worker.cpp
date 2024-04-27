@@ -4,12 +4,12 @@ using namespace worker_server;
 
 //-------------------------------------------------------------//
 
-Server::Server(std::shared_ptr < boost::asio::io_context> io_context, unsigned short port, WORKER_T worker_type,std::string sender){
+Server::Server(std::weak_ptr < boost::asio::io_context> io_context, unsigned short port, WORKER_T worker_type,std::string sender){
     __worker_type = worker_type;
     __sender = sender;
     __context = io_context;
-	__acceptor = std::make_shared<boost::asio::ip::tcp::acceptor>(*io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port));
-    __kill_timer = std::make_shared<boost::asio::deadline_timer>(*__context);
+	__acceptor = std::make_shared<boost::asio::ip::tcp::acceptor>(*__context.lock(), boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port));
+    __kill_timer = std::make_shared<boost::asio::deadline_timer>(*__context.lock());
     __sessions = std::make_shared<std::vector<std::shared_ptr<Session>>>();
 }
 
@@ -17,8 +17,8 @@ Server::~Server() {
 	this->stop();
 }
 
-void Server::start(std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_worker_ids) {
-    __sp_db_worker_ids = sp_db_worker_ids;
+void Server::start() 
+{
 	__accept();
     __kill_timer->expires_from_now(boost::posix_time::seconds(__TIME_KILL));
     __kill_timer->async_wait(boost::bind(&Server::__killSession, shared_from_this(), _1));
@@ -40,7 +40,10 @@ void Server::__accept() {
             }
             switch (__worker_type) {
             case WORKER_MARUSIA_T:
-                __sessions->push_back(std::make_shared<SessionMarusia>(__sender, socket,__sp_db_worker_ids, boost::asio::deadline_timer(*__context), boost::asio::deadline_timer(*__context)));
+                if(!__context.expired()){
+                    __sessions->push_back(std::make_shared<SessionMarusia>(__sender, std::move(socket), boost::asio::deadline_timer(*__context.lock()), boost::asio::deadline_timer(*__context.lock())));
+                }
+                
                 break;
             }
             
@@ -89,13 +92,12 @@ ISession::~ISession()
 
 //-------------------------------------------------------------//
 
-
-Session::Session(std::string sender, boost::asio::ip::tcp::socket& socket, std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_worker_ids,
+const uint8_t Session::MAX_ACTIVE_SESSIONS = 30;
+Session::Session(std::string sender, boost::asio::ip::tcp::socket& socket,
     boost::asio::deadline_timer ping_timer, boost::asio::deadline_timer dead_ping_timer) :
     _socket(std::move(socket)),
     _ping_timer(std::move(ping_timer)), _dead_ping_timer(std::move(dead_ping_timer))
 {
-    _sp_db_worker_ids = sp_db_worker_ids;
     _callback = boost::bind(&Session::__emptyCallback, this, _1);
     _sender = sender;
 }
@@ -123,22 +125,6 @@ void Session::_autorization() {
     boost::json::value analize_value = _buf_json_recive.front();
     _buf_json_recive.pop();
     try {
-        _id = "\"" + std::string(analize_value.at("request").at("id").as_string().c_str()) + "\"";
-        bool successful_find = false;
-
-        /*��������� ���� �� ����� ������������*/
-        std::string worker_name_id = "Id";
-
-        for (auto i = (*_sp_db_worker_ids)->at(worker_name_id).begin(), end = (*_sp_db_worker_ids)->at(worker_name_id).end(); i != end; i++) {
-            if (_id == (*i)) {
-                successful_find = true;
-                break;
-            }
-        }
-        if (!successful_find) {
-            throw std::invalid_argument("id not Found");
-        }
-        /*------------------------------------*/
         //� ������ ������
         _is_live = true;
         _buf_send = serialize(json_formatter::worker::response::connect(_sender));
@@ -304,13 +290,28 @@ void Session::startCommand(COMMAND_CODE_MARUSIA command_code, void* command_para
 std::string Session::getId(){
     return _id;
 }
+void Session::_updateCountSessions()
+{
+    int temp;
+    try{
+        temp = _buf_json_recive.front().at("active_sessions").as_int64();
+        _active_sessions =  temp;
+    }catch(std::exception &e){
+        Logger::writeLog("Session","_updateCountSessions",Logger::log_message_t::WARNING, "json message not include \"active_sessions\"");
+    };
+    _buf_json_recive.pop();
+}
+const int& Session::getActiveSessions()
+{
+    return _active_sessions;
+}
 //-------------------------------------------------------------//
 
 //-------------------------------------------------------------//
 
-SessionMarusia::SessionMarusia(std::string sender, boost::asio::ip::tcp::socket& socket, std::shared_ptr<std::shared_ptr<std::map<std::string, std::vector<std::string>>>> sp_db_worker_marusia,
+SessionMarusia::SessionMarusia(std::string sender, boost::asio::ip::tcp::socket& socket,
     boost::asio::deadline_timer ping_timer, boost::asio::deadline_timer dead_ping_timer) :
-    Session(sender, socket,sp_db_worker_marusia, std::move(ping_timer), std::move(dead_ping_timer))
+    Session(sender, socket, std::move(ping_timer), std::move(dead_ping_timer))
 {}
 SessionMarusia::~SessionMarusia() {
     this->stop();
@@ -323,12 +324,16 @@ void SessionMarusia::_commandAnalize()
         if (target == "ping") {
             _analizePing();
         }
+        else if(target == "count_sessions"){
+            _updateCountSessions();
+        }
         else if (target == "static_message") {
             __staticMessage();
         }
         else if (target == "connect") {
             _autorization();
         }
+        
     }
     catch (std::exception& e) {
         Logger::writeLog("Session","_commandAnalize",Logger::log_message_t::ERROR, e.what());

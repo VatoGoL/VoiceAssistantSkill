@@ -34,11 +34,7 @@ private:
  	short __count_threads;
 
 	std::map<std::string, std::string> __configuration;
-
-	std::shared_ptr<std::map<std::string, std::vector<std::string>>> __sp_db_worker_marusia;
-	std::shared_ptr<std::map<std::string, std::vector<std::string>>> __sp_db_marusia_station;
-	std::shared_ptr<std::map<std::string, std::vector<std::string>>> __sp_db_lift_blocks;
-
+	
 	std::shared_ptr<https_server::Listener> __server_https;
 	std::shared_ptr<worker_server::Server> __server_w_marusia;
 	std::shared_ptr<ClientDB> __client_db;
@@ -49,7 +45,7 @@ private:
 
 	void __loadDataBase();
 	void __startServers(std::map<std::string, std::map<std::string, std::vector<std::string>>> data);
-	void __updateData(std::map<std::string, std::map<std::string, std::vector<std::string>>> &data);
+	void __updateData(const std::map<std::string, std::map<std::string, std::vector<std::string>>> &data);
 	void __updateDataCallback(std::map<std::string, std::map<std::string, std::vector<std::string>>> data);
 	void __updateTimerCallback(const boost::system::error_code& error);
 	
