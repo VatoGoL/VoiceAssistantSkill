@@ -109,6 +109,7 @@ void WorkerM::setDbInfo(std::map <std::string, std::map<std::string, std::vector
     std::map<std::string, std::vector<std::string>> temp_table_groups_name;
     std::map<std::string, std::vector<std::string>> temp_table_university_fact;
     std::map<std::string, std::vector<std::string>> temp_table_days_week;
+    std::map<std::string, std::vector<std::string>> temp_table_directions;
     try{
         temp_table_direction_of_preparation = data["DirectionOfPreparation"];
         temp_table_interesting_fact = data["InterestingFact"];
@@ -117,6 +118,7 @@ void WorkerM::setDbInfo(std::map <std::string, std::map<std::string, std::vector
         temp_table_professors_name = data["ProfessorsName"];
         temp_table_groups_name = data["GroupsName"];
         temp_table_days_week = data["DaysWeek"];
+        temp_table_directions = data["Directions"];
     }catch(std::exception &e){
         Logger::writeLog("WorkerM","setDbInfo",Logger::log_message_t::WARNING, "The data from DB is not correct");
         return;
@@ -128,12 +130,14 @@ void WorkerM::setDbInfo(std::map <std::string, std::map<std::string, std::vector
     __table_groups_name = temp_table_groups_name;
     __table_professors_name = temp_table_professors_name;
     __table_days_week = temp_table_days_week;
+    __table_directions = temp_table_directions;
     
     
     __parseKeyWords(__vectors_variants,__table_static_phrases, "key_words", "response");
     __parseKeyWords(__vectors_variants_professors,__table_professors_name, "key_words", "response");
     __parseKeyWords(__vectors_variants_groups,__table_groups_name, "key_words", "response");
     __parseKeyWords(__vectors_days_week,__table_days_week, "key_words", "response");
+    __parseKeyWords(__vectors_directions,__table_directions, "key_words", "response");
 }
 
 void WorkerM::__parseKeyWords(std::vector<std::pair<std::vector<std::string>, std::string >> &vectors_variants,
@@ -395,21 +399,23 @@ void WorkerM::__connectToDB()
 {
     std::queue<std::string> tables;
     tables.push("DirectionOfPreparation"),tables.push("InterestingFact"),tables.push("UniversityFact"),
-    tables.push("StaticPhrases"), tables.push("GroupsName"),tables.push("ProfessorsName"), tables.push("DaysWeek");
+    tables.push("StaticPhrases"), tables.push("GroupsName"),tables.push("ProfessorsName"), tables.push("DaysWeek"),
+    tables.push("Directions");
    
-    std::vector<std::string> fields_direction_of_preparation = { "direction", "number_of_budget__positions", "minimum_score"};
+    std::vector<std::string> fields_direction_of_preparation = { "direction", "number_of_budget_positions", "minimum_score"};
     std::vector<std::string> fields_interesting_fact = {"fact"};
     std::vector<std::string> fields_university_fact = {"fact"};
     std::vector<std::string> fields_static_phrases = {"key_words", "response"};
     std::vector<std::string> fields_groups_name = {"key_words", "response"};
     std::vector<std::string> fields_professors_name = {"key_words", "response"};
     std::vector<std::string> fields_days_week = {"key_words", "response"};
+    std::vector<std::string> fields_directions = {"key_words", "response"};
 
     std::queue<std::vector<std::string>> fields;
     fields.push(fields_direction_of_preparation), fields.push(fields_interesting_fact),
     fields.push(fields_university_fact), fields.push(fields_static_phrases), 
     fields.push(fields_groups_name),fields.push(fields_professors_name),
-    fields.push(fields_days_week);
+    fields.push(fields_days_week), fields.push(fields_directions);
 
     std::queue<std::string> conditions;
     
@@ -426,11 +432,29 @@ void WorkerM::__resetTimer()
 void WorkerM::__dialogSessionsStep(const std::string &app_id, const std::string& command)
 {
     auto& session_step = __active_dialog_sessions[app_id];
+    
     if(session_step.first == "number_of_places"){
+        std::string direction, result;
         switch(session_step.second){
             case 1:
-
+                direction = __findVariant(__vectors_directions,command);
+                if(direction.empty()){
+                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                                        __getRespToMS( "Извините я не смогла найти выбранное Вами направление. Попробуем ещё?") ));
+                    break;
+                }
+                result = __findDataInTable(__table_direction_of_preparation,"direction",direction,"number_of_budget_posiitons");
+                if(result.empty()){
+                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                                        __getRespToMS( "Неизвестная ошибка, попробуйте другие возможности скила") ));
+                    session_step.second = 0;
+                    break;
+                }
+                __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                                        __getRespToMS( "В прошлом году было " + result + " бюджетных мест. Рассказать ещё?") ));
                 session_step.second++;
+                break;
+                
             break;
             case 2:
                 if(command.find("Да") != std::string::npos || command.find("да") != std::string::npos)
@@ -445,10 +469,26 @@ void WorkerM::__dialogSessionsStep(const std::string &app_id, const std::string&
             break;
         }
     }else if(session_step.first == "min_score"){
+        std::string direction, result;
         switch(session_step.second){
             case 1:
-                
+                direction = __findVariant(__vectors_directions,command);
+                if(direction.empty()){
+                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                                        __getRespToMS( "Извините я не смогла найти выбранное Вами направление. Попробуем ещё?") ));
+                    break;
+                }
+                result = __findDataInTable(__table_direction_of_preparation,"direction",direction,"minimum_score");
+                if(result.empty()){
+                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                                        __getRespToMS( "Неизвестная ошибка, попробуйте другие возможности скила") ));
+                    session_step.second = 0;
+                    break;
+                }
+                __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                                        __getRespToMS( "В прошлом году проходной балл был равен " + result + ". Рассказать ещё?") ));
                 session_step.second++;
+                break;
             break;
             case 2:
                 if(command.find("Да") != std::string::npos || command.find("да") != std::string::npos)
@@ -615,4 +655,25 @@ std::string WorkerM::__findSchedule(const std::string& app_id, const std::vector
     }
     return boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
                                         __getRespToMS( __schedule_manager.getSchedule(target, day) + ". Чем я ещё могу Вам помочь?") ));
+}
+
+std::string WorkerM::__findDataInTable(const std::map<std::string, std::vector<std::string>>& table, 
+                                       const std::string& target_field, const std::string& target_value,
+                                       const std::string& data_field)
+{
+    try{
+        size_t position = 0;
+        for(auto i = table.at(target_field).begin(), end_i = table.at(target_field).end(); i != end_i; i++)
+        {
+            if(target_value == *i){
+                return table.at(data_field)[position];
+            }
+            position++;
+        }
+    }catch(std::exception& e){
+        Logger::writeLog("WorkerM", "__findDataInTable", Logger::log_message_t::ERROR, "Поиск данных в таблице, target_filed: " + target_field + 
+                                                                                        ", target_value: " + target_value + ", data_field: " + data_field);
+        return "";
+    }
+    
 }

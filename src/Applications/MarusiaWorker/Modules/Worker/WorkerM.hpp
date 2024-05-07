@@ -104,11 +104,13 @@ private:
 	std::map<std::string, std::vector<std::string>> __table_groups_name;
 	std::map<std::string, std::vector<std::string>> __table_professors_name;
 	std::map<std::string, std::vector<std::string>> __table_days_week;
+	std::map<std::string, std::vector<std::string>> __table_directions;
 	std::map<std::string, std::pair<std::string, size_t>> __active_dialog_sessions;	
 	std::vector<std::pair<std::vector<std::string>, std::string >> __vectors_variants;	
 	std::vector<std::pair<std::vector<std::string>, std::string >> __vectors_variants_professors;
 	std::vector<std::pair<std::vector<std::string>, std::string >> __vectors_variants_groups;	
-	std::vector<std::pair<std::vector<std::string>, std::string >> __vectors_days_week;													
+	std::vector<std::pair<std::vector<std::string>, std::string >> __vectors_days_week;
+	std::vector<std::pair<std::vector<std::string>, std::string >> __vectors_directions;													
 
 	static void __parseKeyWords(std::vector<std::pair<std::vector<std::string>, std::string >> &vectors_variants,
 						 const std::map<std::string, std::vector<std::string>>& table,
@@ -126,6 +128,9 @@ private:
 
 	static std::string __findVariant(const std::vector<std::pair<std::vector<std::string>, std::string >>& variants, const std::string& data);
 	std::string __findSchedule(const std::string& app_id, const std::vector<std::pair<std::vector<std::string>, std::string >>& variants_target, const std::string& command);
+	std::string __findDataInTable(const std::map<std::string, std::vector<std::string>>& table, 
+								  const std::string& target_field, const std::string& target_value, 
+								  const std::string& data_field);
 	void __analizeRequest();
 	boost::json::object __getRespToMS(const std::string& response_text);
 	void __responseTypeAnalize(const std::string &response_type, const std::string& app_id, const std::string& command);
