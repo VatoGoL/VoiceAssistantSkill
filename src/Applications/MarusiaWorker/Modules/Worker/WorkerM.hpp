@@ -135,6 +135,7 @@ private:
 	boost::json::object __getRespToMS(const std::string& response_text);
 	void __responseTypeAnalize(const std::string &response_type, const std::string& app_id, const std::string& command);
 	void __dialogSessionsStep(const std::string &app_id,const std::string& command);
+	void __clearZombieSessions();
 	enum __CHECK_STATUS
 	{
 		SUCCESS = 1,
