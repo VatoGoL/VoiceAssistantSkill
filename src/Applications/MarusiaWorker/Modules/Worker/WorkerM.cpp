@@ -542,8 +542,19 @@ void WorkerM::__dialogSessionsStep(const std::string &app_id, const std::string&
         }
     }
 }
+void WorkerM::__clearZombieSessions()
+{
+    for(auto i = __active_dialog_sessions.begin(), end_i = __active_dialog_sessions.end(); i != end_i; i++)
+    {
+        if(i->second.second == 0){
+            __active_dialog_sessions.erase(i);
+            return __clearZombieSessions();
+        }
+    }
+}
 void WorkerM::__analizeRequest()
 { 
+    __clearZombieSessions();
     ///___marussia station House number and complex id___///
     std::string app_id = boost::json::serialize(__json_string.at("request").at("station_id"));
     std::string buf_command = boost::json::serialize(__json_string.at("request").at("body").at("request").at("command"));
