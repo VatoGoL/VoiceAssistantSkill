@@ -1,4 +1,5 @@
 #pragma once
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
 #include <iostream>
 #include <csignal>
 #include <boost/bind.hpp>
@@ -10,6 +11,7 @@
 #include "../../../../lib/GlobalModules/JSONFormatter/JSONFormatter.hpp"
 //#include <GlobalModules/JSONFormatter/JSONFormatter.hpp>
 //using namespace std;
+
 typedef std::shared_ptr<boost::asio::ip::tcp::socket> socket_ptr;
 
 namespace worker_server {
@@ -55,8 +57,7 @@ namespace worker_server {
         virtual bool isLive() = 0;
         virtual std::string getId() = 0;
     };
-    const int ISession::_BUF_RECIVE_SIZE = 2048;
-    const int ISession::_PING_TIME = 10;
+    
     /*-----------------------------------------------------------------------------------*/
     class Session : public std::enable_shared_from_this<Session>, protected ISession {
     public:

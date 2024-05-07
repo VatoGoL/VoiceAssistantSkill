@@ -15,14 +15,43 @@ WorkerM::WorkerM(net::io_context& ioc):
     __parser.reset();
     __timer = std::make_shared<net::deadline_timer>(__ioc);
     __flag_disconnect = false;
+    __text_presentation = "Текст презентации университета не был загружен";
+	__text_opportunities = "Текст возможностей скила не был загружен";
 }
 WorkerM::PROCESS_CODE WorkerM::init()
 {
     std::map<std::string, std::string>& configuration = Configer::getConfigInfo();
     Logger::writeLog("WorkerM","init",Logger::log_message_t::EVENT, "WorkerM init starting");
 
-     try
+    try
     {
+        char buffer[1025];
+        std::string file_text = "";
+        std::ifstream fin(configuration.at("Presentation_text"));
+        std::fill_n(buffer, 1024,0);
+        while(fin.readsome(buffer, 1024) != 0){
+            file_text += buffer;
+            std::fill_n(buffer, 1024,0);
+        }
+        fin.close();
+
+        __parser.write(file_text);
+        __text_presentation = __parser.release().as_string();
+        __parser.reset();
+
+        file_text = "";
+        fin.open(configuration.at("Opportunities_text"));
+	    std::fill_n(buffer, 1024,0);
+        while(fin.readsome(buffer, 1024) != 0){
+            file_text += buffer;
+            std::fill_n(buffer, 1024,0);
+        }
+        fin.close();
+        
+        __parser.write(file_text);
+        __text_opportunities = __parser.release().as_string();
+        __parser.reset();
+
         __ip_ms = configuration.at("Main_server_ip");
         __port_ms = std::stoi(configuration.at("Main_server_port"));
         __worker_id = configuration.at("Id");
@@ -60,7 +89,7 @@ void WorkerM::start()
     __timer->expires_from_now(boost::posix_time::hours(24));
     __timer->async_wait(boost::bind(&WorkerM::__resetTimer, shared_from_this()));
     
-    __connectToBd();
+    __connectToDB();
     __connectToMS();
 }
 void WorkerM::stop()
@@ -73,8 +102,80 @@ void WorkerM::stop()
 }
 void WorkerM::setDbInfo(std::map <std::string, std::map<std::string, std::vector<std::string>>> data)
 {
-    __db_info = data;
+    std::map<std::string, std::vector<std::string>> temp_table_direction_of_preparation;
+    std::map<std::string, std::vector<std::string>> temp_table_interesting_fact;
+    std::map<std::string, std::vector<std::string>> temp_table_static_phrases;
+    std::map<std::string, std::vector<std::string>> temp_table_professors_name;
+    std::map<std::string, std::vector<std::string>> temp_table_groups_name;
+    std::map<std::string, std::vector<std::string>> temp_table_university_fact;
+    std::map<std::string, std::vector<std::string>> temp_table_days_week;
+    try{
+        temp_table_direction_of_preparation = data["DirectionOfPreparation"];
+        temp_table_interesting_fact = data["InterestingFact"];
+        temp_table_static_phrases = data["StaticPhrases"];
+        temp_table_university_fact = data["UniversityFact"];
+        temp_table_professors_name = data["ProfessorsName"];
+        temp_table_groups_name = data["GroupsName"];
+        temp_table_days_week = data["DaysWeek"];
+    }catch(std::exception &e){
+        Logger::writeLog("WorkerM","setDbInfo",Logger::log_message_t::WARNING, "The data from DB is not correct");
+        return;
+    }
+    __table_direction_of_preparation = temp_table_direction_of_preparation;
+    __table_interesting_fact = temp_table_interesting_fact;
+    __table_static_phrases = temp_table_static_phrases;
+    __table_university_fact = temp_table_university_fact;
+    __table_groups_name = temp_table_groups_name;
+    __table_professors_name = temp_table_professors_name;
+    __table_days_week = temp_table_days_week;
+    
+    
+    __parseKeyWords(__vectors_variants,__table_static_phrases, "key_words", "response");
+    __parseKeyWords(__vectors_variants_professors,__table_professors_name, "key_words", "response");
+    __parseKeyWords(__vectors_variants_groups,__table_groups_name, "key_words", "response");
+    __parseKeyWords(__vectors_days_week,__table_days_week, "key_words", "response");
 }
+
+void WorkerM::__parseKeyWords(std::vector<std::pair<std::vector<std::string>, std::string >> &vectors_variants,
+                     const std::map<std::string, std::vector<std::string>>& table,
+					 const std::string& key_words_name_field, const std::string& response_name_field)
+{
+    vectors_variants.clear();
+    std::vector<std::string> vector_variants;
+    std::string all_variants;
+    std::string buf_string;
+
+    for(auto key = table.at(key_words_name_field).begin(), end_key = table.at(key_words_name_field).end(),
+             value = table.at(response_name_field).begin(), end_value = table.at(response_name_field).end(); 
+             key != end_key; 
+             key++, value++
+        )
+    {
+        all_variants.clear();
+        remove_copy(key->begin(), key->end(), back_inserter(all_variants), '"');
+        //all_variants = (*key);
+        vector_variants.clear();
+        int num = all_variants.find(";");
+        if (num != all_variants.npos)
+        {
+            while (num != all_variants.npos)
+            {
+                buf_string.assign(all_variants, 0, num);
+                all_variants.erase(0, buf_string.size() + 1);
+                vector_variants.push_back(buf_string);
+                num = all_variants.find(";");
+            }
+            
+            vector_variants.push_back(all_variants);
+        }
+        else
+        {
+            vector_variants.push_back(all_variants);
+        }
+        vectors_variants.push_back(std::make_pair(vector_variants,*value));
+    }
+}
+
 void WorkerM::__connectToMS()
 {
     __socket->async_connect(*__end_point, boost::bind(&WorkerM::__sendConnect, this, boost::placeholders::_1));
@@ -180,7 +281,6 @@ void WorkerM::__sendResponse(const boost::system::error_code& eC, size_t bytes_r
             Sleep(2000);
         #endif
         this->__connectToMS();
-        //__socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&WorkerM::__reciveCommand, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
         return;
     }
 
@@ -230,6 +330,9 @@ void WorkerM::__sendResponse(const boost::system::error_code& eC, size_t bytes_r
             if (target == "ping")
             {
                 __buf_send = boost::json::serialize(json_formatter::worker::response::ping(__name));
+            }
+            else if(target == "load_check"){
+                //!!! вернуть данные о загруженности машины
             }
             else if (target == "disconnect")
             {
@@ -288,246 +391,228 @@ void WorkerM::__reciveAnswer(const boost::system::error_code& eC, size_t bytes_s
         Logger::writeLog("WorkerM","__reciveAnswer",Logger::log_message_t::ERROR, "no one send");
     }
 }
-void WorkerM::__connectToBd()
+void WorkerM::__connectToDB()
 {
     std::queue<std::string> tables;
-    tables.push("MarussiaStation"); tables.push("House"); tables.push("StaticPhrases");
+    tables.push("DirectionOfPreparation"),tables.push("InterestingFact"),tables.push("UniversityFact"),
+    tables.push("StaticPhrases"), tables.push("GroupsName"),tables.push("ProfessorsName"), tables.push("DaysWeek");
+   
+    std::vector<std::string> fields_direction_of_preparation = { "direction", "number_of_budget__positions", "minimum_score"};
+    std::vector<std::string> fields_interesting_fact = {"fact"};
+    std::vector<std::string> fields_university_fact = {"fact"};
+    std::vector<std::string> fields_static_phrases = {"key_words", "response"};
+    std::vector<std::string> fields_groups_name = {"key_words", "response"};
+    std::vector<std::string> fields_professors_name = {"key_words", "response"};
+    std::vector<std::string> fields_days_week = {"key_words", "response"};
+
     std::queue<std::vector<std::string>> fields;
-    std::vector<std::string> fields_marussia = { "ApplicationId", "HouseComplexId", "HouseNum", "LiftBlockId"};
-    std::vector<std::string> fields_house = { "TopFloor", "BottomFloor", "NullFloor", "HouseNumber", "HousingComplexId" };
-    std::vector<std::string> fields_phrases = { "HouseComplexId", "HouseNum", "KeyWords", "Response" };
-    fields.push(fields_marussia); fields.push(fields_house); fields.push(fields_phrases);
+    fields.push(fields_direction_of_preparation), fields.push(fields_interesting_fact),
+    fields.push(fields_university_fact), fields.push(fields_static_phrases), 
+    fields.push(fields_groups_name),fields.push(fields_professors_name),
+    fields.push(fields_days_week);
 
     std::queue<std::string> conditions;
-    //conditions.push("WHERE WorkerId = \"1\" OR WokerSecId = \"1\""); conditions.push(""); conditions.push("");
-    std::cout << __db_log << " " << __db_pas << std::endl;
-    std::cout << __ip_db << " " << __port_db << std::endl;
+    
     __db_client->setQuerys(tables, fields, conditions);
     __db_client->start();
 }
 void WorkerM::__resetTimer()
 {
     Logger::writeLog("WorkerM","__resetTimer",Logger::log_message_t::ERROR, "__rewrite_data_base");
-    __connectToBd();
+    __connectToDB();
     __timer->expires_from_now(boost::posix_time::hours(24));
     __timer->async_wait(boost::bind(&WorkerM::__resetTimer, shared_from_this()));
 }
+void WorkerM::__dialogSessionsStep(const std::string &app_id, const std::string& command)
+{
+    auto& session_step = __active_dialog_sessions[app_id];
+    if(session_step.first == "number_of_places"){
+        switch(session_step.second){
+            case 1:
 
+                session_step.second++;
+            break;
+            case 2:
+                if(command.find("Да") != std::string::npos || command.find("да") != std::string::npos)
+                {
+                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                                        __getRespToMS(  "Какой номер направления Вас интересует?" ) ));
+                    session_step.second--; 
+                }else{
+                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Чем я ещё могу Вам помочь?") ));
+                    session_step.second = 0;
+                }
+            break;
+        }
+    }else if(session_step.first == "min_score"){
+        switch(session_step.second){
+            case 1:
+                
+                session_step.second++;
+            break;
+            case 2:
+                if(command.find("Да") != std::string::npos || command.find("да") != std::string::npos)
+                {
+                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                                        __getRespToMS(  "Какой номер направления Вас интересует?" ) ));
+                    session_step.second--;
+                }else{
+                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Чем я ещё могу Вам помочь?") ));
+                    session_step.second = 0;
+                }
+            break;
+        }
+    }else if(session_step.first == "university_fact"){
+        switch(session_step.second){
+            case 1:
+
+                if(command.find("Да") != std::string::npos || command.find("да") != std::string::npos)
+                {
+                    if(__table_university_fact.at("fact").size() != 0){
+                        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                                        __getRespToMS( __table_university_fact.at("fact") [rand()%__table_university_fact.at("fact").size()]  + ". Рассказать ещё?") ));
+                    }else{
+                        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Извините, что-то я все подзабыла") ));
+                        session_step.second = 0;
+                    }
+                }else{
+                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Чем я ещё могу Вам помочь?") ));
+                    session_step.second = 0;
+                }
+            break;
+        }
+    }else if(session_step.first == "interesting_fact"){
+        switch(session_step.second){
+            case 1:
+
+                if(command.find("Да") != std::string::npos || command.find("да") != std::string::npos)
+                {
+                    if(__table_university_fact.at("fact").size() != 0){
+                        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                                        __getRespToMS( __table_interesting_fact.at("fact") [rand()%__table_interesting_fact.at("fact").size()]  + ". Рассказать ещё?") ));
+                    }else{
+                        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Извините, что-то я все подзабыла") ));
+                        session_step.second = 0;
+                    }
+                }else{
+                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Чем я ещё могу Вам помочь?") ));
+                    session_step.second = 0;
+                }
+            break;
+        }
+    }
+}
 void WorkerM::__analizeRequest()
 { 
     ///___marussia station House number and complex id___///
     std::string app_id = boost::json::serialize(__json_string.at("request").at("station_id"));
+    std::string buf_command = boost::json::serialize(__json_string.at("request").at("body").at("request").at("command"));
+    std::string command;
+    remove_copy(buf_command.begin(), buf_command.end(), back_inserter(command), '"');
 
-    std::cerr << "app_id" << app_id << std::endl;
-    std::map<std::string, std::vector<std::string>> one_table = __db_info.at("MarussiaStation");
-    std::vector<std::string> buf_vec = __db_info.at("MarussiaStation").at("ApplicationId");
-    std::vector<std::string> house_vec = __db_info.at("MarussiaStation").at("HouseNum");
-    std::vector<std::string> comp_vec = __db_info.at("MarussiaStation").at("HouseComplexId");
-    std::vector<std::string> lift_vec = __db_info.at("MarussiaStation").at("LiftBlockId");
-
-    std::string num_house = "-1";
-    std::string comp_id = "-1";
-    std::string lift_block = "";
-    __response_command.clear();
-
-    for (size_t i = 0; i < buf_vec.size(); i++)
+    for(auto i = __active_dialog_sessions.begin(), end_i = __active_dialog_sessions.end(); i != end_i; i++)
     {
-        std::cout << app_id << " " << buf_vec[i] << std::endl;
-        if (app_id == buf_vec[i])
-        {
-            num_house = house_vec[i];
-            comp_id = comp_vec[i];
-            lift_block = lift_vec[i];
-            break;
+        if(app_id == i->first){
+
+            //!!! Вызвать функцию обрабатывающую дерево диалогов
+            __dialogSessionsStep(app_id, command);
+            return;
         }
     }
-    if (num_house == "-1" || comp_id == "-1")
+
+    __response_command = __findVariant(__vectors_variants,command);
+
+    if (!__response_command.empty())
     {
-        Logger::writeLog("WorkerM","__analizeRequest",Logger::log_message_t::ERROR, "error no House or comp");
-        this->stop();
-    }
-    //cerr << "num_house " << num_house << endl;
-    //cerr << "comp_id " << comp_id << endl;
-    //cerr << "lift_block " << lift_block << endl;
-
-    ///___search for mqtt_____/////
-    boost::json::array array_tokens = __json_string.at("request").at("body").at("request").at("nlu").at("tokens").as_array();
-    std::vector<std::string> search_mqtt;
-    bool flag_mqtt = false;
-    //boost::locale::generator gen;
-    for (size_t i = 0; i < array_tokens.size(); i++)
-    {
-
-        std::string buf_string_mqtt = boost::json::serialize(array_tokens[i]);
-        std::string string_mqtt;
-        remove_copy(buf_string_mqtt.begin(), buf_string_mqtt.end(), back_inserter(string_mqtt), '"');
-        search_mqtt.push_back(string_mqtt);
-        for(size_t j = 0; j < __mqtt_keys.size(); j++)
-        {
-            //string buf_mqtt_key = boost::locale::conv::to_utf<char>(string(__mqtt_keys[j].begin(), __mqtt_keys[j].end()), gen(""));
-            std::string buf_mqtt_key = __mqtt_keys[j];
-            std::cerr << "array" << string_mqtt << " my" << buf_mqtt_key << std::endl;
-            if (string_mqtt == buf_mqtt_key)
-            {
-                flag_mqtt = true;
-            }
-        }
-    }
-    if (flag_mqtt)
-    {
-        one_table.clear();
-        one_table = __db_info.at("House");
-        buf_vec.clear(); house_vec.clear(); comp_vec.clear();
-        house_vec = __db_info.at("House").at("HouseNumber");
-        comp_vec = __db_info.at("House").at("HousingComplexId");
-        std::vector<std::string> top_floor = __db_info.at("House").at("TopFloor");
-        std::vector<std::string> bot_floor = __db_info.at("House").at("BottomFloor");
-        std::vector<std::string> null_floor = __db_info.at("House").at("NullFloor");
-        std::string bufNum = "";
-        for (size_t i = 0; i < __key_roots.size(); i++)
-        {
-            for (size_t j = 0; j < search_mqtt.size(); j++)
-            {
-                //string buf_key = boost::locale::conv::to_utf<char>(string(__key_roots[i].begin(), __key_roots[i].end()), gen(""));
-                std::string buf_key = __key_roots[i];
-                std::cerr << search_mqtt[j] << " my" << buf_key << std::endl;
-                if (search_mqtt[j].find(buf_key) != search_mqtt[j].npos)
-                {
-                    bufNum = search_mqtt[j];
-                }
-            }
-        }
-        std::cerr << "bufNum " << bufNum << std::endl;
-        //u8string string_number;
-        std::string string_number;
-        remove_copy(bufNum.begin(), bufNum.end(), back_inserter(string_number), '"');
-        int numFloor = __num_roots.at(string_number);
-        std::cerr << numFloor  << std::endl;
-        for (size_t i = 0; i < house_vec.size(); i++)
-        {
-            if (house_vec[i] == num_house && comp_vec[i] == comp_id)
-            {
-                std::string boofer;
-                remove_copy(top_floor[i].begin(), top_floor[i].end(), back_inserter(boofer), '"');
-                int top = stoi(boofer);
-
-                boofer.clear();
-                remove_copy(bot_floor[i].begin(), bot_floor[i].end(), back_inserter(boofer), '"');
-                int bot = stoi(boofer);
-
-                boofer.clear();
-                remove_copy(null_floor[i].begin(), null_floor[i].end(), back_inserter(boofer), '"');
-                int null;
-                if (boofer == "-1")
-                {
-                    null = -1;
-                }
-                else
-                {
-                    null = 0;
-                }
-                //cerr << top << "" << bot << " " << null << endl;
-                if (top >= numFloor && bot <= numFloor || null == numFloor)
-                {
-                    //__response_command = "перемещаю вас на " + numFloor + "этаж";
-                    //u8string buf_u8_resp = u8"Перемещаю вас на ";
-                    //__response_command = boost::locale::conv::to_utf<char>(string(buf_u8_resp.begin(), buf_u8_resp.end()), gen(""));
-                    std::string buf_u8_resp = "Перемещаю вас на ";
-                    __response_command = buf_u8_resp;
-                    __response_command += bufNum;
-                    buf_u8_resp = " этаж";
-                    //__response_command += boost::locale::conv::to_utf<char>(string(buf_u8_resp.begin(), buf_u8_resp.end()), gen(""));
-                    __response_command += buf_u8_resp;
-                    break;
-                }
-            }
-        }
-        std::cerr << "mqtt ";
-        std::cerr << __response_command << std::endl;
-        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_mqtt_message(__name, app_id, __getRespToMS(__response_command), lift_block, numFloor));
-        //cerr << __buf_send << endl;
-        flag_mqtt = false;
+        //__buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__response_command)));
+        __responseTypeAnalize(__response_command, app_id, command);
     }
     else
     {
-        ///_____static phrases response static phrase___///
-
-        std::string buf_command = boost::json::serialize(__json_string.at("request").at("body").at("request").at("command"));
-        std::string command;
-        remove_copy(buf_command.begin(), buf_command.end(), back_inserter(command), '"');
-        one_table.clear();
-        one_table = __db_info.at("StaticPhrases");
-        buf_vec.clear(); house_vec.clear(); comp_vec.clear();
-        buf_vec = __db_info.at("StaticPhrases").at("KeyWords");
-        house_vec = __db_info.at("StaticPhrases").at("HouseNum");
-        comp_vec = __db_info.at("StaticPhrases").at("HouseComplexId");
-        std::vector<std::string> resp = __db_info.at("StaticPhrases").at("Response");
-        bool flag_stop_search = false;
-
-        for (size_t i = 0; i < buf_vec.size(); i++)
-        {
-            std::string all_variants = buf_vec[i];
-            std::vector<std::string> vector_variants;
-            int num = all_variants.find(";");
-            if (num != all_variants.npos)
-            {
-                while (num != all_variants.npos)
-                {
-                    std::string buf_string;
-                    buf_string.assign(all_variants, 0, num);
-                    all_variants.erase(0, buf_string.size() + 1);
-                    vector_variants.push_back(buf_string);
-                    num = all_variants.find(";");
-                }
-                vector_variants.push_back(all_variants);
-            }
-            else
-            {
-                vector_variants.push_back(all_variants);
-            }
-            for(size_t j = 0; j < vector_variants.size(); j++)
-            {
-                std::string buf_variant;
-                remove_copy(vector_variants[j].begin(), vector_variants[j].end(), back_inserter(buf_variant), '"');
-                std::cerr << command << " " << buf_variant << std::endl;
-                if (command.find(buf_variant)!= std::string::npos)
-                {
-                    std::cerr << command << " " << buf_variant << std::endl;
-                    if (num_house == house_vec[i] && comp_id == comp_vec[i])
-                    {
-                        std::cerr << "resp " << resp[i] << std::endl;
-                        __response_command = resp[i];
-                        flag_stop_search = true;
-                        break;
-                    }
-                }
-            }
-            if (flag_stop_search)
-            {
-                flag_stop_search = false;
-                break;
-            }
-        }
-        if (!__response_command.empty())
-        {
-            __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__response_command)));
-        }
-        else
-        {
-            std::string buf_resp_u8 = "Извините, я не знаю такой команды, пожалуйста, перефразируйте";
-            __response_command.clear();
-            __response_command = buf_resp_u8;
-            //__response_command = boost::locale::conv::to_utf<char>(string(buf_resp_u8.begin(), buf_resp_u8.end()), gen(""));
-            __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__response_command)));
-        }
+        __response_command.clear();
+        __response_command = "Извините, я не знаю такой команды, пожалуйста, перефразируйте";
+        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__response_command)));
     }
-
 }
-boost::json::object WorkerM::__getRespToMS(std::string respText)
+boost::json::object WorkerM::__getRespToMS(const std::string& response_text)
 {
     return boost::json::object({
-                                {"text", respText},
-                                {"tts", respText},
+                                {"text", response_text},
+                                {"tts", response_text},
                                 {"end_session", false}
                                 });
+}
+void WorkerM::__responseTypeAnalize(const std::string &response_type, const std::string& app_id, const std::string& command)
+{
+    
+    
+    if(response_type == "presentation"){
+        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__text_presentation)));
+    }else if(response_type == "opportunities"){
+        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__text_opportunities)));
+    }
+    else if(response_type == "university_fact"){
+        if(__table_university_fact.at("fact").size() != 0){
+            __active_dialog_sessions[app_id] = std::make_pair(response_type, 1);
+            __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                            __getRespToMS( __table_university_fact.at("fact") [rand()%__table_university_fact.at("fact").size()]  + ". Рассказать ещё?") ));
+        }else{
+            __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Извините, что-то я все подзабыла") ));
+        }
+    }
+    else if(response_type == "interesting_fact"){
+        if(__table_interesting_fact.at("fact").size() != 0){
+            __active_dialog_sessions[app_id] = std::make_pair(response_type, 1);
+            __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                            __getRespToMS( __table_interesting_fact.at("fact") [rand()%__table_interesting_fact.at("fact").size()]   + ". Рассказать ещё?") ));
+        }else{
+            __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Извините, что-то я все подзабыла") ));
+        }
+    }
+    else if(response_type == "number_of_places"){
+        __active_dialog_sessions[app_id] = std::make_pair(response_type, 1);
+        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                            __getRespToMS( "Какой номер направления Вас интересует?" ) ));
+    }
+    else if(response_type == "min_score"){
+        __active_dialog_sessions[app_id] = std::make_pair(response_type, 1);
+        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                            __getRespToMS( "Какой номер направления Вас интересует?" ) ));
+    }
+    else if(response_type == "group_classes_now" || response_type == "professor_classes_now" ||
+            response_type == "group_classes_future" || response_type == "professor_classes_future")
+    {
+        __buf_send = __findSchedule(app_id, __vectors_variants_groups, command);
+    }
+}
+
+std::string WorkerM::__findVariant(const std::vector<std::pair<std::vector<std::string>, std::string >>& variants, const std::string& data)
+{
+    for(auto i = variants.begin(), end_i = variants.end(); i != end_i; i++)
+    {
+        for(auto j = i->first.begin(), end_j = i->first.end(); j != end_j; j++)
+        {
+            if(data.find(*j) != std::string::npos)
+            {
+                return i->second;
+            }
+        }
+    }
+    return "";
+}
+std::string WorkerM::__findSchedule(const std::string& app_id, const std::vector<std::pair<std::vector<std::string>, std::string >>& variants_target, const std::string& command)
+{
+    std::string target, day;
+    target = __findVariant(variants_target, command);
+    if(target.empty()){
+        return boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                        __getRespToMS( "Названной вами группы не существует." )));    
+    }
+    day = __findVariant(__vectors_days_week, command);
+    if(day.empty()){
+        return boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                        __getRespToMS( "День недели не найден. Вы уверены что назвали его правильно?" )));    
+    }
+    return boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
+                                        __getRespToMS( __schedule_manager.getSchedule(target, day) + ". Чем я ещё могу Вам помочь?") ));
 }

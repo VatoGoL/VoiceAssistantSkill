@@ -1,7 +1,7 @@
 #include "HTTPSServer.hpp"
 
 using namespace https_server;
-
+const int Session::__RECONNECT_MAX = 3;
 //------------------------------------------------------------------------------
 void https_server::fail(beast::error_code ec, char const* what) {
     if (ec == net::ssl::error::stream_truncated) 
@@ -17,7 +17,7 @@ Session::Session(tcp::socket&& socket,
     ssl::context& ssl_ctx,
     std::string path_to_ssl_certificate,
     std::string path_to_ssl_key,
-    std::weak_ptr<std::vector<worker_server::Session>> sessions_marussia)
+    std::weak_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_marussia)
     : __stream(std::move(socket), ssl_ctx), __ssl_ctx(ssl_ctx)
 {
     __sessions_marusia = sessions_marussia;
@@ -195,7 +195,7 @@ void Session::__analizeRequest()
     __pos_worker_marusia = 0;
     for(auto i = sp_sessions_marusia->begin(), end_i = sp_sessions_marusia->end(); i != end_i; i++)
     {
-        if(i->getActiveSessions() < worker_server::Session::MAX_ACTIVE_SESSIONS){
+        if((*i)->getActiveSessions() < worker_server::Session::MAX_ACTIVE_SESSIONS){
             break;
         }
         __pos_worker_marusia++;
@@ -204,7 +204,7 @@ void Session::__analizeRequest()
         __request_marusia = {};
         __request_marusia.body = __body_request;
         __request_marusia.station_id = __body_request.at("session").at("application").at("application_id").as_string();
-        sp_sessions_marusia->at(__pos_worker_marusia).startCommand(worker_server::Session::COMMAND_CODE_MARUSIA::MARUSIA_STATION_REQUEST, (void*)&__request_marusia,
+        sp_sessions_marusia->at(__pos_worker_marusia)->startCommand(worker_server::Session::COMMAND_CODE_MARUSIA::MARUSIA_STATION_REQUEST, (void*)&__request_marusia,
             boost::bind(&Session::__callbackWorkerMarussia, this, _1));
     }catch(std::exception &e){
         Logger::writeLog("https_server Session", "__analizeRequest",Logger::log_message_t::ERROR, e.what());
@@ -304,7 +304,7 @@ Listener::Listener( net::io_context& io_ctx,
                     std::string path_to_ssl_certificate,
                     std::string path_to_ssl_key,
                     unsigned short port,
-                    std::weak_ptr<std::vector<worker_server::Session>> sessions_marussia)
+                    std::weak_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_marussia)
                     : __io_ctx(io_ctx), __ssl_ctx(ssl_ctx)
 {
     
@@ -312,7 +312,7 @@ Listener::Listener( net::io_context& io_ctx,
 
     __sessions_marussia = sessions_marussia;
     __timer_kill = std::make_shared<boost::asio::deadline_timer>(io_ctx);
-    __sessions = std::make_shared<std::vector<https_server::Session>>();
+    __sessions = std::make_shared<std::vector<std::shared_ptr<https_server::Session>>>();
     __path_to_ssl_certificate = path_to_ssl_certificate;
     __path_to_ssl_key = path_to_ssl_key;
 } 
@@ -325,7 +325,7 @@ void Listener::start() {
 void Listener::__killSession(beast::error_code ec) {
     bool kill = false;
     for (auto i = __sessions->begin(); i != __sessions->end(); i++) {
-        if (!(*i).isLive()) {
+        if (!(*i)->isLive()) {
             __sessions->erase(i);
             kill = true;
             break;
@@ -349,13 +349,13 @@ void Listener::__onAccept(beast::error_code ec, tcp::socket socket) {
     else
     {
         // Create the session and run it
-        __sessions->push_back(https_server::Session(
+        __sessions->push_back(std::make_shared<https_server::Session>(
                                 std::move(socket),
                                 __ssl_ctx,
                                 __path_to_ssl_certificate,
                                 __path_to_ssl_key,
                                 __sessions_marussia));
-        __sessions->back().run();
+        __sessions->back()->run();
       
     }
 

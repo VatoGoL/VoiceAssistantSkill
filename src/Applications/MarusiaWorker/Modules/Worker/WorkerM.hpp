@@ -6,6 +6,7 @@
 #include <GlobalModules/Configer/Configer.hpp>
 #include <GlobalModules/JSONFormatter/JSONFormatter.hpp>
 #include <GlobalModules/ClientDB/ClientDB.hpp>
+#include "../ScheduleManager/ScheduleManager.hpp"
 #include <boost/lambda2.hpp>
 #include <boost/asio.hpp>
 #include <boost/json.hpp>
@@ -75,8 +76,8 @@ private:
 	int __port_db;
 	std::string __db_log;
 	std::string __db_pas;
+	ScheduleManager __schedule_manager;
 
-	std::map<std::string, std::map<std::string, std::vector<std::string>>> __db_info;
 	/*vector<string> __marussiaStationFields = {"ApplicationId", "ComplexId", "HouseNum"};
 	vector<string> __houseFields = { "TopFloor", "BottomFloor", "NullFloor", "HouseNum", "ComplexId" };
 	vector<string> __staticPhrasesFields = { "ComplexId", "HouseNumber", "KeyWords", "Response" };*/
@@ -93,18 +94,25 @@ private:
 	bool __flag_disconnect = false;
 	bool __flag_end_send = false;
 	std::string __response_command;
+	std::string __text_presentation;
+	std::string __text_opportunities;
 	boost::json::value __json_string;
+	std::map<std::string, std::vector<std::string>> __table_direction_of_preparation;
+	std::map<std::string, std::vector<std::string>> __table_interesting_fact;
+	std::map<std::string, std::vector<std::string>> __table_static_phrases;
+	std::map<std::string, std::vector<std::string>> __table_university_fact;
+	std::map<std::string, std::vector<std::string>> __table_groups_name;
+	std::map<std::string, std::vector<std::string>> __table_professors_name;
+	std::map<std::string, std::vector<std::string>> __table_days_week;
+	std::map<std::string, std::pair<std::string, size_t>> __active_dialog_sessions;	
+	std::vector<std::pair<std::vector<std::string>, std::string >> __vectors_variants;	
+	std::vector<std::pair<std::vector<std::string>, std::string >> __vectors_variants_professors;
+	std::vector<std::pair<std::vector<std::string>, std::string >> __vectors_variants_groups;	
+	std::vector<std::pair<std::vector<std::string>, std::string >> __vectors_days_week;													
 
-	std::vector<std::string> __key_roots = { "перв", "втор", "трет", "чет", "пят", "шест", "седьм", "восьм", "девят","дцат", "сорок", "десят",  "девян", "сот","сто","минус", "нулев"};
-	std::map<std::string, int> __num_roots= {
-		{"минус третий", -3}, {"минус второй", -2}, {"минус первый", -1}, {"нулевой", 0},
-		{"первый", 1}, {"второй", 2}, {"третий", 3}, {"четвертый", 4}, {"пятый", 5}, {"шестой", 6}, {"седьмой", 7}, {"восьмой", 8},{"девятый", 9}, {"десятый", 10},
-		{"одиннадцатый", 11}, {"двенадцатый", 12}, {"тринадцатый", 13}, {"четырнадцатый", 14}, {"пятнадцатый", 15}, {"шестнадцатый", 16}, {"семнадцатый", 17}, {"восемнадцатый", 18},
-		{"девятнадцатый", 19}, {"двадцатый", 20}, {"двадцать первый", 21}, {"двадцать второй", 22}, {"двадцать третий", 23}, {"двадцать четвертый", 24}, {"двадцать пятый", 25},
-		{"двадцать шестой", 26}, {"двадцать седьмой", 27}, {"двадцать восьмой", 28}, {"двадцать девятый", 29}, {"тридцатый", 30}
-	};
-	std::vector<std::string> __mqtt_keys = { "этаж","подъем","спуск","подними","опусти" };
-
+	static void __parseKeyWords(std::vector<std::pair<std::vector<std::string>, std::string >> &vectors_variants,
+						 const std::map<std::string, std::vector<std::string>>& table,
+						 const std::string& key_words_name_field, const std::string& response_name_field);
 	void __connectToMS();
 	void __sendConnect(const boost::system::error_code& eC);
 	void __reciveConnect(const boost::system::error_code& eC, size_t bytes_send);
@@ -113,13 +121,15 @@ private:
 
 	void __sendResponse(const boost::system::error_code& eC, size_t bytes_recive);
 	void __reciveAnswer(const boost::system::error_code& eC, size_t bytes_send);
-	void __connectToBd();
+	void __connectToDB();
 	void __resetTimer();
 
+	static std::string __findVariant(const std::vector<std::pair<std::vector<std::string>, std::string >>& variants, const std::string& data);
+	std::string __findSchedule(const std::string& app_id, const std::vector<std::pair<std::vector<std::string>, std::string >>& variants_target, const std::string& command);
 	void __analizeRequest();
-	boost::json::object __getRespToMS(std::string respText);
-
-
+	boost::json::object __getRespToMS(const std::string& response_text);
+	void __responseTypeAnalize(const std::string &response_type, const std::string& app_id, const std::string& command);
+	void __dialogSessionsStep(const std::string &app_id,const std::string& command);
 	enum __CHECK_STATUS
 	{
 		SUCCESS = 1,

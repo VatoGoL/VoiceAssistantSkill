@@ -41,7 +41,7 @@ void Server::__accept() {
             switch (__worker_type) {
             case WORKER_MARUSIA_T:
                 if(!__context.expired()){
-                    __sessions->push_back(std::make_shared<SessionMarusia>(__sender, std::move(socket), boost::asio::deadline_timer(*__context.lock()), boost::asio::deadline_timer(*__context.lock())));
+                    __sessions->push_back(std::make_shared<SessionMarusia>(__sender, socket, boost::asio::deadline_timer(*__context.lock()), boost::asio::deadline_timer(*__context.lock())));
                 }
                 
                 break;
@@ -89,7 +89,8 @@ ISession::~ISession()
     Logger::writeLog("ISession","Destructor",Logger::log_message_t::EVENT,"Session delete");
     delete[] _buf_recive; 
 }
-
+const int ISession::_BUF_RECIVE_SIZE = 2048;
+const int ISession::_PING_TIME = 10;
 //-------------------------------------------------------------//
 
 const uint8_t Session::MAX_ACTIVE_SESSIONS = 30;

@@ -2,7 +2,7 @@
 
 MarusiaWorker::PROCESS_CODE MarusiaWorker::init(std::string way_to_conf_file, std::string name_conf_file)
 {
- 
+	srand(time(NULL));
     try{
 		Logger::init();
 		Configer::init("./",way_to_conf_file,name_conf_file);

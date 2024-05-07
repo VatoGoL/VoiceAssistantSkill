@@ -96,9 +96,9 @@ void MainServer::__startServers(std::map<std::string, std::map<std::string, std:
 		return;
 	}
 	
-	__client_db->setCallback(boost::bind(&MainServer::__updateDataCallback, this, _1));
-	__update_timer->expires_from_now(boost::posix_time::seconds(__TIME_UPDATE));
-	__update_timer->async_wait(boost::bind(&MainServer::__updateTimerCallback, this, _1));
+	//__client_db->setCallback(boost::bind(&MainServer::__updateDataCallback, this, _1));
+	//__update_timer->expires_from_now(boost::posix_time::seconds(__TIME_UPDATE));
+	//__update_timer->async_wait(boost::bind(&MainServer::__updateTimerCallback, this, _1));
 	
 	__server_w_marusia->start();
 	__server_https->start();
@@ -118,13 +118,13 @@ void MainServer::__loadDataBase() {
 	__table_fields.push({ "direction", "number_of_budget_positions", "minimum_score"});
 	__table_conditions.push("");*/
 
-	__client_db->setQuerys(__table_name, __table_fields, __table_conditions);
-	__client_db->start();
+	//__client_db->setQuerys(__table_name, __table_fields, __table_conditions);
+	//__client_db->start();
 }
 void MainServer::__updateData(const std::map<std::string, std::map<std::string, std::vector<std::string>>> &data) {
-	std::shared_ptr<std::map<std::string, std::vector<std::string>>> temp_sp_db_interesting_fact = std::make_shared<std::map<std::string, std::vector<std::string>>>(data.at("InterestingFact"));
-	std::shared_ptr<std::map<std::string, std::vector<std::string>>> temp_sp_db_university_fact = std::make_shared<std::map<std::string, std::vector<std::string>>>(data.at("UniversityFact"));
-	std::shared_ptr<std::map<std::string, std::vector<std::string>>> temp_sp_db_direction_of_preparation = std::make_shared<std::map<std::string, std::vector<std::string>>>(data.at("DirectionOfPreparation"));
+	//std::shared_ptr<std::map<std::string, std::vector<std::string>>> temp_sp_db_interesting_fact = std::make_shared<std::map<std::string, std::vector<std::string>>>(data.at("InterestingFact"));
+	//std::shared_ptr<std::map<std::string, std::vector<std::string>>> temp_sp_db_university_fact = std::make_shared<std::map<std::string, std::vector<std::string>>>(data.at("UniversityFact"));
+	//std::shared_ptr<std::map<std::string, std::vector<std::string>>> temp_sp_db_direction_of_preparation = std::make_shared<std::map<std::string, std::vector<std::string>>>(data.at("DirectionOfPreparation"));
 	
 	/*__sp_db_interesting_fact = temp_sp_db_interesting_fact;
 	__sp_db_university_fact = temp_sp_db_university_fact;
