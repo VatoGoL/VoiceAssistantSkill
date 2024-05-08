@@ -11,6 +11,10 @@ json::object worker::request::connect(std::string sender, std::string id) {
 json::object worker::request::disconnect(std::string sender) {
 	return json::object({ { "sender", sender}, {"target", "disconnect"} });
 }
+boost::json::object worker::request::checkSystemStat(std::string sender)
+{
+	return json::object({ {"sender", sender}, {"target", "check_system_stat"} });
+}
 json::object worker::request::marussia_request(std::string sender, std::string station_id, json::value body) {
 	return json::object({	{ "sender", sender},
 							{ "target", "marussia_station_request"}, 
@@ -44,6 +48,10 @@ json::object worker::response::connect(std::string sender){
 }
 json::object worker::response::disconnect(std::string sender){
 	return json::object({ { "sender", sender}, {"target", "disconnect"}, { "response", {{"status", "success"}}} });
+}
+boost::json::object worker::response::checkSystemStat(std::string sender, long cpu_stat, long mem_stat)
+{
+	return json::object({ {"sender", sender}, {"cpu", cpu_stat}, {"mem", mem_stat} });
 }
 json::object worker::response::errorTarget(std::string sender, boost::json::value target, ERROR_CODE err_code, std::string err_message) {
 	return json::object({	{"sender", sender},

@@ -21,7 +21,7 @@ namespace json_formatter{
 			boost::json::object ping(std::string sender);
 			boost::json::object connect(std::string sender, std::string id);
 			boost::json::object disconnect(std::string sender);
-
+			boost::json::object checkSystemStat(std::string sender);
 			/*��*/
 			boost::json::object marussia_request(std::string sender, std::string station_id, boost::json::value body);
 			boost::json::object mqtt_move(std::string sender, std::string station_id, std::string lift_block_id, int floor);
@@ -30,6 +30,7 @@ namespace json_formatter{
 			/*�����*/
 			boost::json::object ping(std::string sender);
 			boost::json::object errorTarget(std::string sender, boost::json::value target, ERROR_CODE err_code, std::string err_message = "");
+			boost::json::object checkSystemStat(std::string sender, long cpu_stat, long mem_stat);
 			//������� success
 			boost::json::object connect(std::string sender);
 			boost::json::object disconnect(std::string sender);

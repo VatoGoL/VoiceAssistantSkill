@@ -6,6 +6,7 @@
 #include <GlobalModules/Configer/Configer.hpp>
 #include <GlobalModules/JSONFormatter/JSONFormatter.hpp>
 #include <GlobalModules/ClientDB/ClientDB.hpp>
+#include <GlobalModules/SystemStat/SystemStat.hpp>
 #include "../ScheduleManager/ScheduleManager.hpp"
 #include <boost/lambda2.hpp>
 #include <boost/asio.hpp>

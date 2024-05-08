@@ -337,6 +337,8 @@ void WorkerM::__sendResponse(const boost::system::error_code& eC, size_t bytes_r
             }
             else if(target == "load_check"){
                 //!!! вернуть данные о загруженности машины
+                 __buf_send = boost::json::serialize(json_formatter::worker::response::checkSystemStat
+                                                    (__name, SystemStat::busyCPU(), SystemStat::busyMemory()));
             }
             else if (target == "disconnect")
             {
@@ -555,7 +557,6 @@ void WorkerM::__clearZombieSessions()
 void WorkerM::__analizeRequest()
 { 
     __clearZombieSessions();
-    ///___marussia station House number and complex id___///
     std::string app_id = boost::json::serialize(__json_string.at("request").at("station_id"));
     std::string buf_command = boost::json::serialize(__json_string.at("request").at("body").at("request").at("command"));
     std::string command;
@@ -564,8 +565,6 @@ void WorkerM::__analizeRequest()
     for(auto i = __active_dialog_sessions.begin(), end_i = __active_dialog_sessions.end(); i != end_i; i++)
     {
         if(app_id == i->first){
-
-            //!!! Вызвать функцию обрабатывающую дерево диалогов
             __dialogSessionsStep(app_id, command);
             return;
         }
@@ -595,8 +594,6 @@ boost::json::object WorkerM::__getRespToMS(const std::string& response_text)
 }
 void WorkerM::__responseTypeAnalize(const std::string &response_type, const std::string& app_id, const std::string& command)
 {
-    
-    
     if(response_type == "presentation"){
         __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__text_presentation)));
     }else if(response_type == "opportunities"){
@@ -686,5 +683,5 @@ std::string WorkerM::__findDataInTable(const std::map<std::string, std::vector<s
                                                                                         ", target_value: " + target_value + ", data_field: " + data_field);
         return "";
     }
-    
+    return "";
 }
