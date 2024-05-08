@@ -333,12 +333,7 @@ void WorkerM::__sendResponse(const boost::system::error_code& eC, size_t bytes_r
             boost::json::value target = __json_string.at("target");
             if (target == "ping")
             {
-                __buf_send = boost::json::serialize(json_formatter::worker::response::ping(__name));
-            }
-            else if(target == "load_check"){
-                //!!! вернуть данные о загруженности машины
-                 __buf_send = boost::json::serialize(json_formatter::worker::response::checkSystemStat
-                                                    (__name, SystemStat::busyCPU(), SystemStat::busyMemory()));
+                __buf_send = boost::json::serialize(json_formatter::worker::response::ping(__name, SystemStat::busyCPU(), SystemStat::busyMemory()));
             }
             else if (target == "disconnect")
             {

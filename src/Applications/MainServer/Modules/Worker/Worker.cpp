@@ -92,8 +92,8 @@ ISession::~ISession()
 const int ISession::_BUF_RECIVE_SIZE = 2048;
 const int ISession::_PING_TIME = 10;
 //-------------------------------------------------------------//
-
-const uint8_t Session::MAX_ACTIVE_SESSIONS = 30;
+long Session::MAX_CPU_STAT = 80; 
+long Session::MAX_MEM_STAT = 80;
 Session::Session(std::string sender, boost::asio::ip::tcp::socket& socket,
     boost::asio::deadline_timer ping_timer, boost::asio::deadline_timer dead_ping_timer) :
     _socket(std::move(socket)),
@@ -121,6 +121,14 @@ void Session::stop() {
         Logger::writeLog("Session","stop",Logger::log_message_t::ERROR,std::string("stop operation Worker server: ") + e.what());
     }
     
+}
+long Session::getCPUStat()
+{
+    return _cpu_stat;
+}   
+long Session::getMemStat()
+{
+    return _mem_stat;
 }
 void Session::_autorization() {
     boost::json::value analize_value = _buf_json_recive.front();
@@ -249,6 +257,9 @@ void Session::_analizePing()
     _buf_json_recive.pop();
     try {
         if (analise_value.at("response").at("status") == "success") {
+            _cpu_stat = analise_value.at("response").at("cpu").as_int64();
+            _mem_stat = analise_value.at("response").at("mem").as_int64();
+
             _ping_success = true;
             _dead_ping_timer.cancel();
             _ping_timer.expires_from_now(boost::posix_time::seconds(_PING_TIME));
@@ -291,21 +302,7 @@ void Session::startCommand(COMMAND_CODE_MARUSIA command_code, void* command_para
 std::string Session::getId(){
     return _id;
 }
-void Session::_updateCountSessions()
-{
-    int temp;
-    try{
-        temp = _buf_json_recive.front().at("active_sessions").as_int64();
-        _active_sessions =  temp;
-    }catch(std::exception &e){
-        Logger::writeLog("Session","_updateCountSessions",Logger::log_message_t::WARNING, "json message not include \"active_sessions\"");
-    };
-    _buf_json_recive.pop();
-}
-const int& Session::getActiveSessions()
-{
-    return _active_sessions;
-}
+
 //-------------------------------------------------------------//
 
 //-------------------------------------------------------------//
@@ -324,9 +321,6 @@ void SessionMarusia::_commandAnalize()
         boost::json::value target = _buf_json_recive.front().at("target");
         if (target == "ping") {
             _analizePing();
-        }
-        else if(target == "count_sessions"){
-            _updateCountSessions();
         }
         else if (target == "static_message") {
             __staticMessage();

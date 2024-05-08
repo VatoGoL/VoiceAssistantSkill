@@ -195,7 +195,9 @@ void Session::__analizeRequest()
     __pos_worker_marusia = 0;
     for(auto i = sp_sessions_marusia->begin(), end_i = sp_sessions_marusia->end(); i != end_i; i++)
     {
-        if((*i)->getActiveSessions() < worker_server::Session::MAX_ACTIVE_SESSIONS){
+        if((*i)->getCPUStat() < worker_server::Session::MAX_CPU_STAT &&
+           (*i)->getMemStat() < worker_server::Session::MAX_MEM_STAT)
+        {
             break;
         }
         __pos_worker_marusia++;

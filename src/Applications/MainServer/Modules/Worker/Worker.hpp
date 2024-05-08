@@ -73,10 +73,7 @@ namespace worker_server {
         boost::asio::deadline_timer _ping_timer;
         boost::asio::deadline_timer _dead_ping_timer;
         _callback_t _callback;
-        
-        int _active_sessions;
-        void _updateCountSessions();
-        
+        long _cpu_stat, _mem_stat;
 
         virtual void _autorization() override;
         virtual _CHECK_STATUS _reciveCheck(const size_t& count_recive_byte, _handler_t&& handler) override;
@@ -88,16 +85,17 @@ namespace worker_server {
         virtual void _analizePing() override;
         virtual void _deadPing(const boost::system::error_code& error) override;
     public:
-        static const uint8_t MAX_ACTIVE_SESSIONS;
-        Session(std::string sender, boost::asio::ip::tcp::socket& socket, boost::asio::deadline_timer ping_timer, boost::asio::deadline_timer dead_ping_timer);
+        static long MAX_CPU_STAT, MAX_MEM_STAT;
+        Session(std::string sender, boost::asio::ip::tcp::socket& socket, boost::asio::deadline_timer ping_timer, 
+                boost::asio::deadline_timer dead_ping_timer);
         virtual ~Session();
 
         virtual void start() override;
         virtual void stop() override;
         virtual bool isLive() override;
         virtual std::string getId() override;
-        const int& getActiveSessions();
-
+        long getCPUStat();
+        long getMemStat();
         virtual void startCommand(COMMAND_CODE_MARUSIA command_code, void* command_parametr, _callback_t callback);
     };
     /*-----------------------------------------------------------------------------------*/
