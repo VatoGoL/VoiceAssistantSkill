@@ -423,6 +423,7 @@ int DataBase::__connection(void* answer, int argc, char** argv, char** az_col_na
     {
         std::cerr << e.what() << std::endl;
     }
+    return 1;
 }
 DataBase::DataBase(tcp::socket sock)
 {

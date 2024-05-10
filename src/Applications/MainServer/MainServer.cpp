@@ -5,11 +5,11 @@ MainServer::MainServer() {}
 MainServer::~MainServer() {
 	stop();
 }
-MainServer::PROCESS_CODE MainServer::init(std::string path_to_config_file) {
+MainServer::PROCESS_CODE MainServer::init(std::string config_file_name) {
 
 	try{
 		Logger::init();
-		Configer::init("./",path_to_config_file);
+		Configer::init("","",config_file_name);
 	}catch(Logger::error_logger_t &e){
 		switch(e){
 			case Logger::error_logger_t::FILE_NOT_OPEN:
@@ -53,6 +53,7 @@ MainServer::PROCESS_CODE MainServer::init(std::string path_to_config_file) {
 		}
 	}
 	catch (std::exception& e) {
+		std::cerr << e.what() << std::endl;
 		Logger::writeLog("MainServer","init",Logger::log_message_t::ERROR,e.what());
 		return PROCESS_CODE::CONFIG_DATA_NOT_FULL;
 	}
@@ -74,16 +75,21 @@ void MainServer::stop(){
 }
 void MainServer::start() {
 	
-	__loadDataBase();
-
-	__threads.reserve(__count_threads - 1);
-	for (auto i = __count_threads - 1; i > 0; --i)
-		__threads.emplace_back(
-			[this]
-			{
-				__io_ctx->run();
-			});
-	__io_ctx->run();
+	__server_w_marusia->start();
+	__server_https->start();
+	try{
+		__threads.reserve(__count_threads - 1);
+		for (auto i = __count_threads - 1; i > 0; --i)
+			__threads.emplace_back(
+				[this]
+				{
+					__io_ctx->run();
+				});
+		__io_ctx->run();
+	}catch(std::exception &e){
+		Logger::writeLog("MainServer", "start", Logger::log_message_t::EVENT, e.what());
+	}
+	
 }
 void MainServer::__startServers(std::map<std::string, std::map<std::string, std::vector<std::string>>> data) {
 	Logger::writeLog("MainServer", "__start_Servers",Logger::log_message_t::EVENT, "Start servers");

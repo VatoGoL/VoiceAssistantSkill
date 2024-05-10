@@ -4,7 +4,7 @@ ServerDataBase::PROCESS_CODE ServerDataBase::init(std::string config_way, std::s
 {
     try{
 		Logger::init();
-		Configer::init(config_way,name_conf);
+		Configer::init("",config_way,name_conf);
 	}catch(Logger::error_logger_t &e){
 		switch(e){
 			case Logger::error_logger_t::FILE_NOT_OPEN:

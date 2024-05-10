@@ -5,7 +5,7 @@ MarusiaWorker::PROCESS_CODE MarusiaWorker::init(std::string way_to_conf_file, st
 	srand(time(NULL));
     try{
 		Logger::init();
-		Configer::init("./",way_to_conf_file,name_conf_file);
+		Configer::init("",way_to_conf_file,name_conf_file);
 	}catch(Logger::error_logger_t &e){
 		switch(e){
 			case Logger::error_logger_t::FILE_NOT_OPEN:

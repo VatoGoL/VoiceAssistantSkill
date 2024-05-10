@@ -42,9 +42,10 @@ void Session::__onRun() {
                               beast::bind_front_handler( &Session::__onHandshake, shared_from_this() ));
 }
 void Session::__onHandshake(beast::error_code ec) {
+    //std::cout << "Handshake" << std::endl;
     /*тут нужно добавить перечтение ssl сертификата*/
     if (ec) { 
-
+        std::cout << "error code" << std::endl;
         if(load_server_certificate(__ssl_ctx,__path_to_ssl_certificate, __path_to_ssl_key) == -1){
             return fail(ec, "Load Sertificate error"); 
         }
@@ -59,6 +60,7 @@ void Session::__onHandshake(beast::error_code ec) {
         return;
     }
     __is_live = true;
+    std::cout << "doRead" << std::endl;
     __doRead();
 }
 void Session::__doRead() {
@@ -163,7 +165,8 @@ void Session::__analizeRequest()
 
     //POST
     beast::error_code err_code;
-
+    
+    Logger::writeLog("HTTPSServer", "__analizeRequest", Logger::log_message_t::EVENT, "Marusia connect");
     try {
         __parser.reset();
         __parser.write(__req.body(), err_code);
@@ -310,7 +313,7 @@ Listener::Listener( net::io_context& io_ctx,
                     : __io_ctx(io_ctx), __ssl_ctx(ssl_ctx)
 {
     
-    __acceptor = std::make_shared<tcp::acceptor>(__io_ctx, tcp::endpoint(tcp::v4(), port));
+    __acceptor = std::make_shared<tcp::acceptor>(io_ctx, tcp::endpoint(tcp::v4(), port));
 
     __sessions_marussia = sessions_marussia;
     __timer_kill = std::make_shared<boost::asio::deadline_timer>(io_ctx);

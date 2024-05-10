@@ -27,7 +27,7 @@
 #include <queue>
 #include <boost/bind.hpp>
 
-#define DB_WAY "./SmartLiftBase.db"
+#define DB_WAY "./DataBase.db"
 
 namespace beast = boost::beast;
 namespace http = beast::http;

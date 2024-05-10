@@ -16,28 +16,28 @@ int main(int argc, char* argv[])
     }
 
     MainServer app;
-
+    bool exit_fail = false;
     switch(app.init(config_file_name))
     {
         case MainServer::PROCESS_CODE::UNKNOWN_ERROR:
             std::cerr << "ERROR! app init: unknown error" << std::endl;
-            return EXIT_FAILURE;
+            exit_fail = true;
             break;
         case MainServer::PROCESS_CODE::LOG_FILE_NOT_OPEN:
             std::cerr << "ERROR! app init: log file not open" << std::endl;
-            return EXIT_FAILURE;
+            exit_fail = true;
             break;
         case MainServer::PROCESS_CODE::CONFIG_FILE_NOT_OPEN:
             std::cerr << "ERROR! app init: config file not open" << std::endl;
-            return EXIT_FAILURE;
+            exit_fail = true;
             break;
         case MainServer::PROCESS_CODE::CONFIG_DATA_NOT_FULL:
             std::cerr << "ERROR! app init: config data not full" << std::endl;
-            return EXIT_FAILURE;
+            exit_fail = true;
             break;
         case MainServer::PROCESS_CODE::CONFIG_DATA_NOT_CORRECT:
             std::cerr << "ERROR! app init: config data not correct" << std::endl;
-            return EXIT_FAILURE;
+            exit_fail = true;
             break;
         case MainServer::PROCESS_CODE::SUCCESSFUL:
             app.start();
@@ -45,5 +45,5 @@ int main(int argc, char* argv[])
     }
     
 
-    return EXIT_SUCCESS;
+    return exit_fail ? EXIT_FAILURE : EXIT_SUCCESS;
 }

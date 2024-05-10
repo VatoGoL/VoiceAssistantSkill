@@ -62,7 +62,7 @@ public:
 	MainServer();
 	~MainServer();
 
-	PROCESS_CODE init(std::string path_to_config_file);
+	PROCESS_CODE init(std::string config_file_name);
 	void start();
 	void stop();
 };

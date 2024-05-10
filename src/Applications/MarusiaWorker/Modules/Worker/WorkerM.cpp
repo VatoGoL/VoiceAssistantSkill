@@ -36,7 +36,7 @@ WorkerM::PROCESS_CODE WorkerM::init()
         fin.close();
 
         __parser.write(file_text);
-        __text_presentation = __parser.release().as_string();
+        __text_presentation = __parser.release().at("text").get_string();
         __parser.reset();
 
         file_text = "";
@@ -49,16 +49,16 @@ WorkerM::PROCESS_CODE WorkerM::init()
         fin.close();
         
         __parser.write(file_text);
-        __text_opportunities = __parser.release().as_string();
+        __text_opportunities = __parser.release().at("opportunities").get_string();
         __parser.reset();
 
         __ip_ms = configuration.at("Main_server_ip");
         __port_ms = std::stoi(configuration.at("Main_server_port"));
         __worker_id = configuration.at("Id");
-        __ip_db = configuration.at("BD_ip");
-        __port_db = std::stoi(configuration.at("BD_port"));
-        __db_log = configuration.at("BD_login");
-        __db_pas = configuration.at("BD_password");
+        __ip_db = configuration.at("DB_ip");
+        __port_db = std::stoi(configuration.at("DB_port"));
+        __db_log = configuration.at("DB_login");
+        __db_pas = configuration.at("DB_password");
         __socket_dB = std::make_shared<tcp::socket>(__ioc);
         __db_client = std::make_shared<ClientDB>(__ip_db, __port_db, __db_log, __db_pas, __name, __socket_dB, callback);
         __end_point = std::make_shared<tcp::endpoint>(tcp::endpoint(net::ip::address::from_string(__ip_ms), __port_ms));
