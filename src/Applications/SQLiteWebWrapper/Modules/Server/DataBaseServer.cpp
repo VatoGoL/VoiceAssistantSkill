@@ -362,13 +362,13 @@ void DataBase::__checkConnect(std::string login, std::string password)
             sqlite3_close(__dB);
             try
             {
-                std::vector<std::string> __login = __answer.at("Login");
-                std::vector<std::string> __password = __answer.at("Password");
+                std::vector<std::string> __login = __answer.at("login");
+                std::vector<std::string> __password = __answer.at("password");
                 int num_pus = -1;
                 for (size_t i = 0; i < __login.size(); i++)
                 {
                     std::string buf_log = "\"" + __login[i] + "\"";
-
+                    std::cout << buf_log << " " << login << std::endl;
                     if (buf_log == (std::string)login)
                     {
                         num_pus = i;
@@ -376,6 +376,7 @@ void DataBase::__checkConnect(std::string login, std::string password)
                     }
                 }
                 std::string buf_pas = "\"" + __password[num_pus] + "\"";
+                std::cout << buf_pas << " " << password << std::endl;
                 if (buf_pas == password)
                 {
                     __buf_send = boost::json::serialize(json_formatter::database::response::connect(__name));
@@ -389,7 +390,7 @@ void DataBase::__checkConnect(std::string login, std::string password)
             }
             catch (std::exception& e)
             {
-                std::cerr << e.what() << std::endl;
+                std::cerr <<"__checkConnect: " << e.what() << std::endl;
             }
         }
         sqlite3_close(__dB);

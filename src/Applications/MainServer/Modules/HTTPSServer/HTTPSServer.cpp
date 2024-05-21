@@ -198,11 +198,13 @@ void Session::__analizeRequest()
     __pos_worker_marusia = 0;
     for(auto i = sp_sessions_marusia->begin(), end_i = sp_sessions_marusia->end(); i != end_i; i++)
     {
-        if((*i)->getCPUStat() < worker_server::Session::MAX_CPU_STAT &&
+        if(/*(*i)->getCPUStat() < worker_server::Session::MAX_CPU_STAT &&*/
            (*i)->getMemStat() < worker_server::Session::MAX_MEM_STAT)
         {
+            std::cerr << (*i)->getCPUStat() << " " << (*i)->getMemStat() << std::endl;
             break;
         }
+        std::cerr << (*i)->getCPUStat() << " " << (*i)->getMemStat() << std::endl;
         __pos_worker_marusia++;
     }
     try{
@@ -212,6 +214,7 @@ void Session::__analizeRequest()
         sp_sessions_marusia->at(__pos_worker_marusia)->startCommand(worker_server::Session::COMMAND_CODE_MARUSIA::MARUSIA_STATION_REQUEST, (void*)&__request_marusia,
             boost::bind(&Session::__callbackWorkerMarussia, this, _1));
     }catch(std::exception &e){
+        std::cerr << __pos_worker_marusia << std::endl;
         Logger::writeLog("https_server Session", "__analizeRequest",Logger::log_message_t::ERROR, e.what());
         __callbackWorkerMarussia({{"target", "application_not_found"}});
     }

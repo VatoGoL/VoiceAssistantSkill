@@ -101,6 +101,8 @@ Session::Session(std::string sender, boost::asio::ip::tcp::socket& socket,
 {
     _callback = boost::bind(&Session::__emptyCallback, this, _1);
     _sender = sender;
+    _cpu_stat = 0;
+    _mem_stat = 0;
 }
 Session::~Session() {
     this->stop();

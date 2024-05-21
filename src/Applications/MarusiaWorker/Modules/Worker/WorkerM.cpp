@@ -148,6 +148,7 @@ void WorkerM::__parseKeyWords(std::vector<std::pair<std::vector<std::string>, st
     std::vector<std::string> vector_variants;
     std::string all_variants;
     std::string buf_string;
+    std::string currect_value;
 
     for(auto key = table.at(key_words_name_field).begin(), end_key = table.at(key_words_name_field).end(),
              value = table.at(response_name_field).begin(), end_value = table.at(response_name_field).end(); 
@@ -156,7 +157,10 @@ void WorkerM::__parseKeyWords(std::vector<std::pair<std::vector<std::string>, st
         )
     {
         all_variants.clear();
+        currect_value.clear();
         remove_copy(key->begin(), key->end(), back_inserter(all_variants), '"');
+        remove_copy(value->begin(), value->end(), back_inserter(currect_value), '"');
+        
         //all_variants = (*key);
         vector_variants.clear();
         int num = all_variants.find(";");
@@ -169,14 +173,13 @@ void WorkerM::__parseKeyWords(std::vector<std::pair<std::vector<std::string>, st
                 vector_variants.push_back(buf_string);
                 num = all_variants.find(";");
             }
-            
             vector_variants.push_back(all_variants);
         }
         else
         {
             vector_variants.push_back(all_variants);
         }
-        vectors_variants.push_back(std::make_pair(vector_variants,*value));
+        vectors_variants.push_back(std::make_pair(vector_variants,currect_value));
     }
 }
 
@@ -551,12 +554,13 @@ void WorkerM::__clearZombieSessions()
 }
 void WorkerM::__analizeRequest()
 { 
+    
     __clearZombieSessions();
     std::string app_id = boost::json::serialize(__json_string.at("request").at("station_id"));
     std::string buf_command = boost::json::serialize(__json_string.at("request").at("body").at("request").at("command"));
     std::string command;
     remove_copy(buf_command.begin(), buf_command.end(), back_inserter(command), '"');
-
+    std::cerr <<"command: " <<  command << std::endl;
     for(auto i = __active_dialog_sessions.begin(), end_i = __active_dialog_sessions.end(); i != end_i; i++)
     {
         if(app_id == i->first){
@@ -589,6 +593,7 @@ boost::json::object WorkerM::__getRespToMS(const std::string& response_text)
 }
 void WorkerM::__responseTypeAnalize(const std::string &response_type, const std::string& app_id, const std::string& command)
 {
+    std::cerr <<"Resp_type " << response_type << std::endl;
     if(response_type == "presentation"){
         __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__text_presentation)));
     }else if(response_type == "opportunities"){
@@ -622,10 +627,13 @@ void WorkerM::__responseTypeAnalize(const std::string &response_type, const std:
         __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
                                             __getRespToMS( "Какой номер направления Вас интересует?" ) ));
     }
-    else if(response_type == "group_classes_now" || response_type == "professor_classes_now" ||
-            response_type == "group_classes_future" || response_type == "professor_classes_future")
+    else if(response_type == "group_classes_now" || response_type == "group_classes_future")
     {
         __buf_send = __findSchedule(app_id, __vectors_variants_groups, command);
+    }
+    else if(response_type == "professor_classes_now" || response_type == "professor_classes_future")
+    {
+        __buf_send = __findSchedule(app_id, __vectors_variants_professors, command);
     }
 }
 
