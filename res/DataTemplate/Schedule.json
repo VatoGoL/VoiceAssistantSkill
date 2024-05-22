@@ -37,7 +37,7 @@
                             "building": "1" 
                         }
                     ],
-                    "tuesday":[],
+                    "tuesday":[{}],
                     "wednesday":
                     [
                         {
@@ -86,8 +86,8 @@
                             "building": "1" 
                         }
                     ],
-                    "friday":[],
-                    "saturday":[]
+                    "friday":[{}],
+                    "saturday":[{}]
                 },
                 "second":
                 {
@@ -173,8 +173,8 @@
                             "building": "1" 
                         }
                     ],
-                    "friday":[],
-                    "saturday":[]
+                    "friday":[{}],
+                    "saturday":[{}]
                 }
             }
         },
@@ -266,8 +266,8 @@
                             "building": "1" 
                         }
                     ],
-                    "friday":[],
-                    "saturday":[]
+                    "friday":[{}],
+                    "saturday":[{}]
                 },
                 "second":
                 {
@@ -353,8 +353,8 @@
                             "building": "1" 
                         }
                     ],
-                    "friday":[],
-                    "saturday":[]
+                    "friday":[{}],
+                    "saturday":[{}]
                 }
             }
         }
@@ -384,7 +384,7 @@
                             "building": "1" 
                         }
                     ],
-                    "tuesday":[],
+                    "tuesday":[{}],
                     "wednesday":
                     [
                         {
@@ -395,9 +395,9 @@
                             "building": "1" 
                         }
                     ],
-                    "thuersday":[],
-                    "friday":[],
-                    "saturday":[]
+                    "thuersday":[{}],
+                    "friday":[{}],
+                    "saturday":[{}]
                 },
                 "second":
                 {
@@ -418,7 +418,7 @@
                             "building": "1" 
                         }
                     ],
-                    "tuesday":[],
+                    "tuesday":[{}],
                     "wednesday":
                     [
                         {
@@ -429,9 +429,9 @@
                             "building": "1" 
                         }
                     ],
-                    "thuersday":[],
-                    "friday":[],
-                    "saturday":[]
+                    "thuersday":[{}],
+                    "friday":[{}],
+                    "saturday":[{}]
                 }
             }
         },
@@ -499,7 +499,7 @@
                             "building": "5" 
                         }
                     ],
-                    "thuersday":[],
+                    "thuersday":[{}],
                     "friday":
                     [
                         {
@@ -524,7 +524,7 @@
                             "building": "5" 
                         }
                     ],
-                    "saturday":[]
+                    "saturday":[{}]
                 },
                 "second":
                 {
@@ -600,7 +600,7 @@
                             "building": "5" 
                         }
                     ],
-                    "thuersday":[],
+                    "thuersday":[{}],
                     "friday":
                     [
                         {
@@ -625,7 +625,7 @@
                             "building": "5" 
                         }
                     ],
-                    "saturday":[]
+                    "saturday":[{}]
                 }
             }
         }

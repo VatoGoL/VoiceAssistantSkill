@@ -8,7 +8,7 @@ const size_t Logger::MAX_FILESIZE = 1024*100; //100Kb
 const uint16_t Logger::__DELTA_FILESIZE = 1024*2; //2Kb
 std::string Logger::__full_path_to_directory = DEFAULT_PATH+DEFAULT_DIRECTORY;
 std::ofstream Logger::__fout(__full_path_to_directory + PREFIX + "_notInit" + POSTFIX);
-const uint8_t Logger::DEFAULT_MAX_COUNT_MESSAGE_IN_QUEUE = 10;
+const uint8_t Logger::DEFAULT_MAX_COUNT_MESSAGE_IN_QUEUE = 1;
 Logger::error_func_t Logger::__error_callback = {};
 std::string Logger::__path_to_log_directory;
 std::string Logger::__directory;

@@ -79,11 +79,6 @@ private:
 	std::string __db_pas;
 	ScheduleManager __schedule_manager;
 
-	/*vector<string> __marussiaStationFields = {"ApplicationId", "ComplexId", "HouseNum"};
-	vector<string> __houseFields = { "TopFloor", "BottomFloor", "NullFloor", "HouseNum", "ComplexId" };
-	vector<string> __staticPhrasesFields = { "ComplexId", "HouseNumber", "KeyWords", "Response" };*/
-
-
 	static const int BUF_RECIVE_SIZE = 2048;
 	std::string __buf_send;
 	char* __buf_recive;
@@ -128,15 +123,16 @@ private:
 	void __resetTimer();
 
 	static std::string __findVariant(const std::vector<std::pair<std::vector<std::string>, std::string >>& variants, const std::string& data);
-	std::string __findSchedule(const std::string& app_id, const std::vector<std::pair<std::vector<std::string>, std::string >>& variants_target, const std::string& command);
+	std::string __findSchedule(const std::string& app_id, const std::vector<std::pair<std::vector<std::string>, std::string >>& variants_target, const std::string& command, const bool& is_professors);
 	std::string __findDataInTable(const std::map<std::string, std::vector<std::string>>& table, 
 								  const std::string& target_field, const std::string& target_value, 
 								  const std::string& data_field);
 	void __analizeRequest();
 	boost::json::object __getRespToMS(const std::string& response_text);
-	void __responseTypeAnalize(const std::string &response_type, const std::string& app_id, const std::string& command);
-	void __dialogSessionsStep(const std::string &app_id,const std::string& command);
+	void __responseTypeAnalize(const std::string &response_type, const std::string& app_ip, const std::string& app_id, const std::string& command);
+	void __dialogSessionsStep(const std::string& app_ip, const std::string &app_id,const std::string& command);
 	void __clearZombieSessions();
+	boost::json::array __getActiveDialogSessions();
 	enum __CHECK_STATUS
 	{
 		SUCCESS = 1,

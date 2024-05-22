@@ -40,6 +40,7 @@ namespace https_server {
     {
         ssl::context& __ssl_ctx;
         beast::ssl_stream<beast::tcp_stream> __stream;
+        std::string __ip_client;
         beast::flat_buffer __buffer;
         http::request<http::string_body> __req;
         json::stream_parser __parser;

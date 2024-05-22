@@ -22,6 +22,16 @@ json::object worker::request::marussia_request(std::string sender, std::string s
 							}
 						});
 }
+json::object worker::request::marussia_request(std::string sender, std::string station_ip, std::string body) {
+	return json::object({	{ "sender", sender},
+							{ "target", "marussia_station_request"}, 
+							{ "request", {
+									{"station_ip", station_ip},
+									{"body", body}
+								}
+							}
+						});
+}
 json::object worker::request::mqtt_move(std::string sender, std::string station_id, std::string lift_block_id, int floor) {
 	return json::object({ { "sender", sender},
 							{ "target", "move_lift"},
@@ -40,11 +50,12 @@ boost::json::object worker::response::ping(std::string sender)
 {
 	return json::object({ {"sender", sender}, {"target", "ping"}, { "response", {{"status", "success"}}} });
 }
-json::object worker::response::ping(std::string sender, long cpu_stat, long mem_stat) {
+json::object worker::response::ping(std::string sender, long cpu_stat, long mem_stat, boost::json::array clients) {
 	return json::object({ {"sender", sender}, {"target", "ping"}, { "response", {
 																		{"status", "success"}, 
 																		{"cpu", cpu_stat}, 
-																		{"mem", mem_stat}
+																		{"mem", mem_stat},
+																		{"clients_ip", clients}
 																	}} });
 }
 json::object worker::response::connect(std::string sender){

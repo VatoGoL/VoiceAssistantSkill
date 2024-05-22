@@ -132,6 +132,10 @@ long Session::getMemStat()
 {
     return _mem_stat;
 }
+const boost::json::array& Session::getActiveClientsIp()
+{
+    return _active_clients_ip;
+}
 void Session::_autorization() {
     boost::json::value analize_value = _buf_json_recive.front();
     _buf_json_recive.pop();
@@ -261,7 +265,7 @@ void Session::_analizePing()
         if (analise_value.at("response").at("status") == "success") {
             _cpu_stat = analise_value.at("response").at("cpu").as_int64();
             _mem_stat = analise_value.at("response").at("mem").as_int64();
-
+            _active_clients_ip = analise_value.at("response").at("clients_ip").get_array(); 
             _ping_success = true;
             _dead_ping_timer.cancel();
             _ping_timer.expires_from_now(boost::posix_time::seconds(_PING_TIME));
@@ -341,7 +345,7 @@ void SessionMarusia::startCommand(COMMAND_CODE_MARUSIA command_code, void* comma
     if (command_code == MARUSIA_STATION_REQUEST && _is_live) {
         _callback = callback;
         marussia_station_request_t* parametr = (marussia_station_request_t*)command_parametr;
-        _buf_send = serialize(json_formatter::worker::request::marussia_request(_sender, parametr->station_id, parametr->body));
+        _buf_send = serialize(json_formatter::worker::request::marussia_request(_sender, parametr->station_ip, parametr->body));
         _next_recive = true;
         _socket.async_send(boost::asio::buffer(_buf_send, _buf_send.size()), 
                             boost::bind(&SessionMarusia::_sendCommand, shared_from_this(), _1, _2));

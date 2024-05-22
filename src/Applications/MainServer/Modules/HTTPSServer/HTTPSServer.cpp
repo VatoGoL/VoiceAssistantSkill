@@ -18,7 +18,7 @@ Session::Session(tcp::socket&& socket,
     std::string path_to_ssl_certificate,
     std::string path_to_ssl_key,
     std::weak_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_marussia)
-    : __stream(std::move(socket), ssl_ctx), __ssl_ctx(ssl_ctx)
+    : __ip_client(socket.local_endpoint().address().to_string()), __stream(std::move(socket), ssl_ctx), __ssl_ctx(ssl_ctx)
 {
     __sessions_marusia = sessions_marussia;
     __path_to_ssl_certificate = path_to_ssl_certificate;
@@ -167,7 +167,7 @@ void Session::__analizeRequest()
     beast::error_code err_code;
     
     Logger::writeLog("HTTPSServer", "__analizeRequest", Logger::log_message_t::EVENT, "Marusia connect");
-    try {
+    /*try {
         __parser.reset();
         __parser.write(__req.body(), err_code);
         if (err_code) {
@@ -186,7 +186,7 @@ void Session::__analizeRequest()
         __sendResponse(__badRequest(std::string("Bad alloc JSON: ") + e.what()));
         return;
     }
-    __body_request = __parser.release();
+    __body_request = __parser.release();*/
     auto sp_sessions_marusia = __sessions_marusia.lock();
     
     if (sp_sessions_marusia->size() == 0) {
@@ -196,24 +196,45 @@ void Session::__analizeRequest()
     }
     
     __pos_worker_marusia = 0;
+    bool find_session = false;
+    std::cerr << "Ip client: " << __ip_client << std::endl;
     for(auto i = sp_sessions_marusia->begin(), end_i = sp_sessions_marusia->end(); i != end_i; i++)
     {
-        if(/*(*i)->getCPUStat() < worker_server::Session::MAX_CPU_STAT &&*/
-           (*i)->getMemStat() < worker_server::Session::MAX_MEM_STAT)
+        for(auto j = (*i)->getActiveClientsIp().begin(), end_j = (*i)->getActiveClientsIp().end(); j != end_j; j++)
         {
-            std::cerr << (*i)->getCPUStat() << " " << (*i)->getMemStat() << std::endl;
+            if(j->get_string() == __ip_client)
+            {
+                find_session == true;
+                break;
+            }
+        }
+        if(find_session){
             break;
         }
-        std::cerr << (*i)->getCPUStat() << " " << (*i)->getMemStat() << std::endl;
         __pos_worker_marusia++;
     }
+    if(!find_session){
+        __pos_worker_marusia = 0;
+        for(auto i = sp_sessions_marusia->begin(), end_i = sp_sessions_marusia->end(); i != end_i; i++)
+        {
+            if(/*(*i)->getCPUStat() < worker_server::Session::MAX_CPU_STAT &&*/
+                (*i)->getMemStat() < worker_server::Session::MAX_MEM_STAT)
+            {
+                std::cerr << (*i)->getCPUStat() << " " << (*i)->getMemStat() << std::endl;
+                break;
+            }
+            std::cerr << (*i)->getCPUStat() << " " << (*i)->getMemStat() << std::endl;
+            __pos_worker_marusia++;
+        }
+    }
+    
     try{
         __request_marusia = {};
-        __request_marusia.body = __body_request;
-        __request_marusia.station_id = __body_request.at("session").at("application").at("application_id").as_string();
+        __request_marusia.body = __req.body();
+        __request_marusia.station_ip = __ip_client;
         sp_sessions_marusia->at(__pos_worker_marusia)->startCommand(worker_server::Session::COMMAND_CODE_MARUSIA::MARUSIA_STATION_REQUEST, (void*)&__request_marusia,
             boost::bind(&Session::__callbackWorkerMarussia, this, _1));
-    }catch(std::exception &e){
+    }catch(std::exception &e){                ///!!! nens
         std::cerr << __pos_worker_marusia << std::endl;
         Logger::writeLog("https_server Session", "__analizeRequest",Logger::log_message_t::ERROR, e.what());
         __callbackWorkerMarussia({{"target", "application_not_found"}});

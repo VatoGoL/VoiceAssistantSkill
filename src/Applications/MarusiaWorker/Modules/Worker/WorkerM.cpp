@@ -26,32 +26,33 @@ WorkerM::PROCESS_CODE WorkerM::init()
     try
     {
         char buffer[1025];
-        std::string file_text = "";
+        
         std::ifstream fin(configuration.at("Presentation_text"));
         std::fill_n(buffer, 1024,0);
-        while(fin.readsome(buffer, 1024) != 0){
-            file_text += buffer;
+        size_t count_read = 0;
+        while((count_read = fin.readsome(buffer, 1024)) != 0){
+            __parser.write_some(buffer, count_read);
             std::fill_n(buffer, 1024,0);
         }
         fin.close();
 
-        __parser.write(file_text);
         __text_presentation = __parser.release().at("text").get_string();
         __parser.reset();
-
-        file_text = "";
+        Logger::writeLog("WorkerM","Init",Logger::log_message_t::EVENT,"Presentation success");
+        
         fin.open(configuration.at("Opportunities_text"));
 	    std::fill_n(buffer, 1024,0);
-        while(fin.readsome(buffer, 1024) != 0){
-            file_text += buffer;
+        while((count_read = fin.readsome(buffer, 1024)) != 0){
+            __parser.write_some(buffer, count_read);
             std::fill_n(buffer, 1024,0);
         }
         fin.close();
         
-        __parser.write(file_text);
         __text_opportunities = __parser.release().at("opportunities").get_string();
         __parser.reset();
-
+        Logger::writeLog("WorkerM","Init",Logger::log_message_t::EVENT,"Opportonities success");
+        __schedule_manager.init(configuration.at("Schedule_path"));
+        Logger::writeLog("WorkerM","Init",Logger::log_message_t::EVENT,"Schedule success");
         __ip_ms = configuration.at("Main_server_ip");
         __port_ms = std::stoi(configuration.at("Main_server_port"));
         __worker_id = configuration.at("Id");
@@ -276,6 +277,19 @@ void WorkerM::__reciveCommand(const boost::system::error_code& eC, size_t bytes_
     __buf_json_recive = {};
     __socket->async_receive(net::buffer(__buf_recive, BUF_RECIVE_SIZE), boost::bind(&WorkerM::__sendResponse, shared_from_this(), boost::placeholders::_1, boost::placeholders::_2));
 }
+
+boost::json::array WorkerM::__getActiveDialogSessions()
+{
+    boost::json::array result;
+
+    for(auto i = __active_dialog_sessions.begin(), end_i = __active_dialog_sessions.end(); i != end_i; i++ )
+    {
+        result.push_back(boost::json::value(i->first));
+    }
+
+    return result;
+}
+
 void WorkerM::__sendResponse(const boost::system::error_code& eC, size_t bytes_recive)
 {
     if (eC)
@@ -336,7 +350,7 @@ void WorkerM::__sendResponse(const boost::system::error_code& eC, size_t bytes_r
             boost::json::value target = __json_string.at("target");
             if (target == "ping")
             {
-                __buf_send = boost::json::serialize(json_formatter::worker::response::ping(__name, SystemStat::busyCPU(), SystemStat::busyMemory()));
+                __buf_send = boost::json::serialize(json_formatter::worker::response::ping(__name, SystemStat::busyCPU(), SystemStat::busyMemory(), __getActiveDialogSessions()));
             }
             else if (target == "disconnect")
             {
@@ -429,9 +443,9 @@ void WorkerM::__resetTimer()
     __timer->expires_from_now(boost::posix_time::hours(24));
     __timer->async_wait(boost::bind(&WorkerM::__resetTimer, shared_from_this()));
 }
-void WorkerM::__dialogSessionsStep(const std::string &app_id, const std::string& command)
+void WorkerM::__dialogSessionsStep(const std::string &app_ip,const std::string &app_id, const std::string& command)
 {
-    auto& session_step = __active_dialog_sessions[app_id];
+    auto& session_step = __active_dialog_sessions[app_ip];
     
     if(session_step.first == "number_of_places"){
         std::string direction, result;
@@ -457,7 +471,7 @@ void WorkerM::__dialogSessionsStep(const std::string &app_id, const std::string&
                 
             break;
             case 2:
-                if(command.find("Да") != std::string::npos || command.find("да") != std::string::npos)
+                if(command.find("да") != std::string::npos)
                 {
                     __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
                                                         __getRespToMS(  "Какой номер направления Вас интересует?" ) ));
@@ -491,7 +505,7 @@ void WorkerM::__dialogSessionsStep(const std::string &app_id, const std::string&
                 break;
             break;
             case 2:
-                if(command.find("Да") != std::string::npos || command.find("да") != std::string::npos)
+                if(command.find("да") != std::string::npos)
                 {
                     __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
                                                         __getRespToMS(  "Какой номер направления Вас интересует?" ) ));
@@ -506,7 +520,7 @@ void WorkerM::__dialogSessionsStep(const std::string &app_id, const std::string&
         switch(session_step.second){
             case 1:
 
-                if(command.find("Да") != std::string::npos || command.find("да") != std::string::npos)
+                if(command.find("да") != std::string::npos)
                 {
                     if(__table_university_fact.at("fact").size() != 0){
                         __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
@@ -525,7 +539,7 @@ void WorkerM::__dialogSessionsStep(const std::string &app_id, const std::string&
         switch(session_step.second){
             case 1:
 
-                if(command.find("Да") != std::string::npos || command.find("да") != std::string::npos)
+                if(command.find("да") != std::string::npos)
                 {
                     if(__table_university_fact.at("fact").size() != 0){
                         __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
@@ -556,15 +570,16 @@ void WorkerM::__analizeRequest()
 { 
     
     __clearZombieSessions();
-    std::string app_id = boost::json::serialize(__json_string.at("request").at("station_id"));
+    std::string app_id = boost::json::serialize(__json_string.at("request").at("body").at("session").at("application").at("application_id"));
+    std::string app_ip = boost::json::serialize(__json_string.at("request").at("station_ip"));
     std::string buf_command = boost::json::serialize(__json_string.at("request").at("body").at("request").at("command"));
     std::string command;
     remove_copy(buf_command.begin(), buf_command.end(), back_inserter(command), '"');
     std::cerr <<"command: " <<  command << std::endl;
     for(auto i = __active_dialog_sessions.begin(), end_i = __active_dialog_sessions.end(); i != end_i; i++)
     {
-        if(app_id == i->first){
-            __dialogSessionsStep(app_id, command);
+        if(app_ip == i->first){
+            __dialogSessionsStep(app_ip, app_id, command);
             return;
         }
     }
@@ -574,7 +589,7 @@ void WorkerM::__analizeRequest()
     if (!__response_command.empty())
     {
         //__buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__response_command)));
-        __responseTypeAnalize(__response_command, app_id, command);
+        __responseTypeAnalize(__response_command, app_ip,app_id, command);
     }
     else
     {
@@ -591,7 +606,7 @@ boost::json::object WorkerM::__getRespToMS(const std::string& response_text)
                                 {"end_session", false}
                                 });
 }
-void WorkerM::__responseTypeAnalize(const std::string &response_type, const std::string& app_id, const std::string& command)
+void WorkerM::__responseTypeAnalize(const std::string &response_type, const std::string& app_ip, const std::string& app_id, const std::string& command)
 {
     std::cerr <<"Resp_type " << response_type << std::endl;
     if(response_type == "presentation"){
@@ -601,7 +616,7 @@ void WorkerM::__responseTypeAnalize(const std::string &response_type, const std:
     }
     else if(response_type == "university_fact"){
         if(__table_university_fact.at("fact").size() != 0){
-            __active_dialog_sessions[app_id] = std::make_pair(response_type, 1);
+            __active_dialog_sessions[app_ip] = std::make_pair(response_type, 1);
             __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
                                             __getRespToMS( __table_university_fact.at("fact") [rand()%__table_university_fact.at("fact").size()]  + ". Рассказать ещё?") ));
         }else{
@@ -610,7 +625,7 @@ void WorkerM::__responseTypeAnalize(const std::string &response_type, const std:
     }
     else if(response_type == "interesting_fact"){
         if(__table_interesting_fact.at("fact").size() != 0){
-            __active_dialog_sessions[app_id] = std::make_pair(response_type, 1);
+            __active_dialog_sessions[app_ip] = std::make_pair(response_type, 1);
             __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
                                             __getRespToMS( __table_interesting_fact.at("fact") [rand()%__table_interesting_fact.at("fact").size()]   + ". Рассказать ещё?") ));
         }else{
@@ -618,22 +633,22 @@ void WorkerM::__responseTypeAnalize(const std::string &response_type, const std:
         }
     }
     else if(response_type == "number_of_places"){
-        __active_dialog_sessions[app_id] = std::make_pair(response_type, 1);
+        __active_dialog_sessions[app_ip] = std::make_pair(response_type, 1);
         __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
                                             __getRespToMS( "Какой номер направления Вас интересует?" ) ));
     }
     else if(response_type == "min_score"){
-        __active_dialog_sessions[app_id] = std::make_pair(response_type, 1);
+        __active_dialog_sessions[app_ip] = std::make_pair(response_type, 1);
         __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
                                             __getRespToMS( "Какой номер направления Вас интересует?" ) ));
     }
     else if(response_type == "group_classes_now" || response_type == "group_classes_future")
     {
-        __buf_send = __findSchedule(app_id, __vectors_variants_groups, command);
+        __buf_send = __findSchedule(app_id, __vectors_variants_groups, command, false);
     }
     else if(response_type == "professor_classes_now" || response_type == "professor_classes_future")
     {
-        __buf_send = __findSchedule(app_id, __vectors_variants_professors, command);
+        __buf_send = __findSchedule(app_id, __vectors_variants_professors, command, true);
     }
 }
 
@@ -651,7 +666,7 @@ std::string WorkerM::__findVariant(const std::vector<std::pair<std::vector<std::
     }
     return "";
 }
-std::string WorkerM::__findSchedule(const std::string& app_id, const std::vector<std::pair<std::vector<std::string>, std::string >>& variants_target, const std::string& command)
+std::string WorkerM::__findSchedule(const std::string& app_id, const std::vector<std::pair<std::vector<std::string>, std::string >>& variants_target, const std::string& command, const bool& is_professors)
 {
     std::string target, day;
     target = __findVariant(variants_target, command);
@@ -664,8 +679,14 @@ std::string WorkerM::__findSchedule(const std::string& app_id, const std::vector
         return boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
                                         __getRespToMS( "День недели не найден. Вы уверены что назвали его правильно?" )));    
     }
+    bool is_first_week = false;
+    if(command.find("первая") != std::string::npos || command.find("нечетная") != std::string::npos)
+    {
+        is_first_week = true;
+    }
+
     return boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                        __getRespToMS( __schedule_manager.getSchedule(target, day) + ". Чем я ещё могу Вам помочь?") ));
+                                        __getRespToMS( __schedule_manager.getSchedule(target, day,is_first_week, is_professors) + ". Чем я ещё могу Вам помочь?") ));
 }
 
 std::string WorkerM::__findDataInTable(const std::map<std::string, std::vector<std::string>>& table, 

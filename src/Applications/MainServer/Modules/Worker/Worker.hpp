@@ -74,7 +74,7 @@ namespace worker_server {
         boost::asio::deadline_timer _dead_ping_timer;
         _callback_t _callback;
         long _cpu_stat, _mem_stat;
-
+        boost::json::array _active_clients_ip;
         virtual void _autorization() override;
         virtual _CHECK_STATUS _reciveCheck(const size_t& count_recive_byte, _handler_t&& handler) override;
         virtual _CHECK_STATUS _sendCheck(const size_t& count_send_byte, size_t& temp_send_byte, _handler_t&& handler) override;
@@ -96,6 +96,7 @@ namespace worker_server {
         virtual std::string getId() override;
         long getCPUStat();
         long getMemStat();
+        const boost::json::array& getActiveClientsIp();
         virtual void startCommand(COMMAND_CODE_MARUSIA command_code, void* command_parametr, _callback_t callback);
     };
     /*-----------------------------------------------------------------------------------*/
@@ -112,8 +113,9 @@ namespace worker_server {
         virtual void _commandAnalize() override;
     public:
         struct marussia_station_request_t {
-            std::string station_id = "";
-            boost::json::value body = {};
+            std::string station_ip = "";
+            //boost::json::value body = {};
+            std::string body;
         };
         SessionMarusia(std::string sender, boost::asio::ip::tcp::socket& socket,
                        boost::asio::deadline_timer ping_timer, boost::asio::deadline_timer dead_ping_timer);
