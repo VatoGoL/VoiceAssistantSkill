@@ -65,6 +65,7 @@ namespace https_server {
     public:
         explicit Session(tcp::socket&& socket,
             ssl::context& ssl_ctx,
+            std::string ip_client,
             std::string path_to_ssl_certificate,
             std::string path_to_ssl_key,
             std::weak_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_marussia);
@@ -87,7 +88,7 @@ namespace https_server {
         void __analizeRequest();
         http::message_generator __badRequest(beast::string_view why);
         void __callbackWorkerMarussia(boost::json::value data);
-        void __constructResponse(boost::json::object response_data);
+        void __constructResponse(const boost::json::object& response_data, const boost::json::object& session);
     };
 
     //------------------------------------------------------------------------------

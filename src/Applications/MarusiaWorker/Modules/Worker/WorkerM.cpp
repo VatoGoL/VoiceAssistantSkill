@@ -361,7 +361,6 @@ void WorkerM::__sendResponse(const boost::system::error_code& eC, size_t bytes_r
             {
                 __analizeRequest();
             }
-            std::cerr << __flag_disconnect << std::endl;
             if (__buf_json_recive.size() == 0)
             {
                 __flag_end_send = true;
@@ -443,7 +442,7 @@ void WorkerM::__resetTimer()
     __timer->expires_from_now(boost::posix_time::hours(24));
     __timer->async_wait(boost::bind(&WorkerM::__resetTimer, shared_from_this()));
 }
-void WorkerM::__dialogSessionsStep(const std::string &app_ip,const std::string &app_id, const std::string& command)
+void WorkerM::__dialogSessionsStep(const std::string &app_ip,const std::string &app_id, const std::string& command,const boost::json::object& session)
 {
     auto& session_step = __active_dialog_sessions[app_ip];
     
@@ -454,18 +453,18 @@ void WorkerM::__dialogSessionsStep(const std::string &app_ip,const std::string &
                 direction = __findVariant(__vectors_directions,command);
                 if(direction.empty()){
                     __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                                        __getRespToMS( "Извините я не смогла найти выбранное Вами направление. Попробуем ещё?") ));
+                                                        __getRespToMS( "Извините я не смогла найти выбранное Вами направление. Попробуем ещё?"),session ));
                     break;
                 }
                 result = __findDataInTable(__table_direction_of_preparation,"direction",direction,"number_of_budget_posiitons");
                 if(result.empty()){
                     __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                                        __getRespToMS( "Неизвестная ошибка, попробуйте другие возможности скила") ));
+                                                        __getRespToMS( "Неизвестная ошибка, попробуйте другие возможности скила"),session ));
                     session_step.second = 0;
                     break;
                 }
                 __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                                        __getRespToMS( "В прошлом году было " + result + " бюджетных мест. Рассказать ещё?") ));
+                                                        __getRespToMS( "В прошлом году было " + result + " бюджетных мест. Рассказать ещё?"),session ));
                 session_step.second++;
                 break;
                 
@@ -474,10 +473,10 @@ void WorkerM::__dialogSessionsStep(const std::string &app_ip,const std::string &
                 if(command.find("да") != std::string::npos)
                 {
                     __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                                        __getRespToMS(  "Какой номер направления Вас интересует?" ) ));
+                                                        __getRespToMS(  "Какой номер направления Вас интересует?" ),session ));
                     session_step.second--; 
                 }else{
-                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Чем я ещё могу Вам помочь?") ));
+                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Чем я ещё могу Вам помочь?") ,session));
                     session_step.second = 0;
                 }
             break;
@@ -489,18 +488,18 @@ void WorkerM::__dialogSessionsStep(const std::string &app_ip,const std::string &
                 direction = __findVariant(__vectors_directions,command);
                 if(direction.empty()){
                     __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                                        __getRespToMS( "Извините я не смогла найти выбранное Вами направление. Попробуем ещё?") ));
+                                                        __getRespToMS( "Извините я не смогла найти выбранное Вами направление. Попробуем ещё?"),session ));
                     break;
                 }
                 result = __findDataInTable(__table_direction_of_preparation,"direction",direction,"minimum_score");
                 if(result.empty()){
                     __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                                        __getRespToMS( "Неизвестная ошибка, попробуйте другие возможности скила") ));
+                                                        __getRespToMS( "Неизвестная ошибка, попробуйте другие возможности скила") ,session));
                     session_step.second = 0;
                     break;
                 }
                 __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                                        __getRespToMS( "В прошлом году проходной балл был равен " + result + ". Рассказать ещё?") ));
+                                                        __getRespToMS( "В прошлом году проходной балл был равен " + result + ". Рассказать ещё?"),session ));
                 session_step.second++;
                 break;
             break;
@@ -508,10 +507,10 @@ void WorkerM::__dialogSessionsStep(const std::string &app_ip,const std::string &
                 if(command.find("да") != std::string::npos)
                 {
                     __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                                        __getRespToMS(  "Какой номер направления Вас интересует?" ) ));
+                                                        __getRespToMS(  "Какой номер направления Вас интересует?" ),session ));
                     session_step.second--;
                 }else{
-                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Чем я ещё могу Вам помочь?") ));
+                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Чем я ещё могу Вам помочь?"),session ));
                     session_step.second = 0;
                 }
             break;
@@ -524,13 +523,13 @@ void WorkerM::__dialogSessionsStep(const std::string &app_ip,const std::string &
                 {
                     if(__table_university_fact.at("fact").size() != 0){
                         __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                                        __getRespToMS( __table_university_fact.at("fact") [rand()%__table_university_fact.at("fact").size()]  + ". Рассказать ещё?") ));
+                                                        __getRespToMS( __table_university_fact.at("fact") [rand()%__table_university_fact.at("fact").size()]  + ". Рассказать ещё?"),session ));
                     }else{
-                        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Извините, что-то я все подзабыла") ));
+                        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Извините, что-то я все подзабыла"),session ));
                         session_step.second = 0;
                     }
                 }else{
-                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Чем я ещё могу Вам помочь?") ));
+                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Чем я ещё могу Вам помочь?"),session ));
                     session_step.second = 0;
                 }
             break;
@@ -543,13 +542,13 @@ void WorkerM::__dialogSessionsStep(const std::string &app_ip,const std::string &
                 {
                     if(__table_university_fact.at("fact").size() != 0){
                         __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                                        __getRespToMS( __table_interesting_fact.at("fact") [rand()%__table_interesting_fact.at("fact").size()]  + ". Рассказать ещё?") ));
+                                                        __getRespToMS( __table_interesting_fact.at("fact") [rand()%__table_interesting_fact.at("fact").size()]  + ". Рассказать ещё?"),session ));
                     }else{
-                        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Извините, что-то я все подзабыла") ));
+                        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Извините, что-то я все подзабыла"),session ));
                         session_step.second = 0;
                     }
                 }else{
-                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Чем я ещё могу Вам помочь?") ));
+                    __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Чем я ещё могу Вам помочь?"),session ));
                     session_step.second = 0;
                 }
             break;
@@ -570,16 +569,19 @@ void WorkerM::__analizeRequest()
 { 
     
     __clearZombieSessions();
-    std::string app_id = boost::json::serialize(__json_string.at("request").at("body").at("session").at("application").at("application_id"));
+    
+    
+    boost::json::value marusia_request = boost::json::parse(__json_string.at("request").at("body").get_string());
+    std::string app_id = boost::json::serialize(marusia_request.at("session").at("application").at("application_id"));
     std::string app_ip = boost::json::serialize(__json_string.at("request").at("station_ip"));
-    std::string buf_command = boost::json::serialize(__json_string.at("request").at("body").at("request").at("command"));
+    std::string buf_command = boost::json::serialize(marusia_request.at("request").at("command"));
     std::string command;
     remove_copy(buf_command.begin(), buf_command.end(), back_inserter(command), '"');
     std::cerr <<"command: " <<  command << std::endl;
     for(auto i = __active_dialog_sessions.begin(), end_i = __active_dialog_sessions.end(); i != end_i; i++)
     {
         if(app_ip == i->first){
-            __dialogSessionsStep(app_ip, app_id, command);
+            __dialogSessionsStep(app_ip, app_id, command, marusia_request.at("session").get_object());
             return;
         }
     }
@@ -589,13 +591,13 @@ void WorkerM::__analizeRequest()
     if (!__response_command.empty())
     {
         //__buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__response_command)));
-        __responseTypeAnalize(__response_command, app_ip,app_id, command);
+        __responseTypeAnalize(__response_command, app_ip,app_id, command, marusia_request.at("session").get_object());
     }
     else
     {
         __response_command.clear();
         __response_command = "Извините, я не знаю такой команды, пожалуйста, перефразируйте";
-        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__response_command)));
+        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__response_command),marusia_request.at("session").get_object()));
     }
 }
 boost::json::object WorkerM::__getRespToMS(const std::string& response_text)
@@ -606,49 +608,48 @@ boost::json::object WorkerM::__getRespToMS(const std::string& response_text)
                                 {"end_session", false}
                                 });
 }
-void WorkerM::__responseTypeAnalize(const std::string &response_type, const std::string& app_ip, const std::string& app_id, const std::string& command)
+void WorkerM::__responseTypeAnalize(const std::string &response_type, const std::string& app_ip, const std::string& app_id, const std::string& command, const boost::json::object& session)
 {
-    std::cerr <<"Resp_type " << response_type << std::endl;
     if(response_type == "presentation"){
-        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__text_presentation)));
+        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__text_presentation), session));
     }else if(response_type == "opportunities"){
-        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__text_opportunities)));
+        __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS(__text_opportunities), session));
     }
     else if(response_type == "university_fact"){
         if(__table_university_fact.at("fact").size() != 0){
             __active_dialog_sessions[app_ip] = std::make_pair(response_type, 1);
             __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                            __getRespToMS( __table_university_fact.at("fact") [rand()%__table_university_fact.at("fact").size()]  + ". Рассказать ещё?") ));
+                                            __getRespToMS( __table_university_fact.at("fact") [rand()%__table_university_fact.at("fact").size()]  + ". Рассказать ещё?") , session));
         }else{
-            __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Извините, что-то я все подзабыла") ));
+            __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Извините, что-то я все подзабыла") , session));
         }
     }
     else if(response_type == "interesting_fact"){
         if(__table_interesting_fact.at("fact").size() != 0){
             __active_dialog_sessions[app_ip] = std::make_pair(response_type, 1);
             __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                            __getRespToMS( __table_interesting_fact.at("fact") [rand()%__table_interesting_fact.at("fact").size()]   + ". Рассказать ещё?") ));
+                                            __getRespToMS( __table_interesting_fact.at("fact") [rand()%__table_interesting_fact.at("fact").size()]   + ". Рассказать ещё?") , session));
         }else{
-            __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Извините, что-то я все подзабыла") ));
+            __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, __getRespToMS( "Извините, что-то я все подзабыла") , session));
         }
     }
     else if(response_type == "number_of_places"){
         __active_dialog_sessions[app_ip] = std::make_pair(response_type, 1);
         __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                            __getRespToMS( "Какой номер направления Вас интересует?" ) ));
+                                            __getRespToMS( "Какой номер направления Вас интересует?" ) , session));
     }
     else if(response_type == "min_score"){
         __active_dialog_sessions[app_ip] = std::make_pair(response_type, 1);
         __buf_send = boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                            __getRespToMS( "Какой номер направления Вас интересует?" ) ));
+                                            __getRespToMS( "Какой номер направления Вас интересует?" ) , session));
     }
     else if(response_type == "group_classes_now" || response_type == "group_classes_future")
     {
-        __buf_send = __findSchedule(app_id, __vectors_variants_groups, command, false);
+        __buf_send = __findSchedule(app_id, __vectors_variants_groups, command, false, session);
     }
     else if(response_type == "professor_classes_now" || response_type == "professor_classes_future")
     {
-        __buf_send = __findSchedule(app_id, __vectors_variants_professors, command, true);
+        __buf_send = __findSchedule(app_id, __vectors_variants_professors, command, true, session);
     }
 }
 
@@ -666,18 +667,18 @@ std::string WorkerM::__findVariant(const std::vector<std::pair<std::vector<std::
     }
     return "";
 }
-std::string WorkerM::__findSchedule(const std::string& app_id, const std::vector<std::pair<std::vector<std::string>, std::string >>& variants_target, const std::string& command, const bool& is_professors)
+std::string WorkerM::__findSchedule(const std::string& app_id, const std::vector<std::pair<std::vector<std::string>, std::string >>& variants_target, const std::string& command, const bool& is_professors, const boost::json::object& session)
 {
     std::string target, day;
     target = __findVariant(variants_target, command);
     if(target.empty()){
         return boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                        __getRespToMS( "Названной вами группы не существует." )));    
+                                        __getRespToMS( "Названной вами группы не существует." ), session));    
     }
     day = __findVariant(__vectors_days_week, command);
     if(day.empty()){
         return boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                        __getRespToMS( "День недели не найден. Вы уверены что назвали его правильно?" )));    
+                                        __getRespToMS( "День недели не найден. Вы уверены что назвали его правильно?" ), session));    
     }
     bool is_first_week = false;
     if(command.find("первая") != std::string::npos || command.find("нечетная") != std::string::npos)
@@ -686,7 +687,7 @@ std::string WorkerM::__findSchedule(const std::string& app_id, const std::vector
     }
 
     return boost::json::serialize(json_formatter::worker::response::marussia_static_message(__name, app_id, 
-                                        __getRespToMS( __schedule_manager.getSchedule(target, day,is_first_week, is_professors) + ". Чем я ещё могу Вам помочь?") ));
+                                        __getRespToMS( __schedule_manager.getSchedule(target, day,is_first_week, is_professors) + ". Чем я ещё могу Вам помочь?") ,session));
 }
 
 std::string WorkerM::__findDataInTable(const std::map<std::string, std::vector<std::string>>& table, 

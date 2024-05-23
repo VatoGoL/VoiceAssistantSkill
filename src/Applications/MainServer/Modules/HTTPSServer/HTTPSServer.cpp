@@ -15,11 +15,13 @@ void https_server::fail(beast::error_code ec, char const* what) {
 
 Session::Session(tcp::socket&& socket,
     ssl::context& ssl_ctx,
+    std::string ip_client,
     std::string path_to_ssl_certificate,
     std::string path_to_ssl_key,
     std::weak_ptr<std::vector<std::shared_ptr<worker_server::Session>>> sessions_marussia)
-    : __ip_client(socket.local_endpoint().address().to_string()), __stream(std::move(socket), ssl_ctx), __ssl_ctx(ssl_ctx)
+    :__stream(std::move(socket), ssl_ctx), __ssl_ctx(ssl_ctx)
 {
+    __ip_client = ip_client;
     __sessions_marusia = sessions_marussia;
     __path_to_ssl_certificate = path_to_ssl_certificate;
     __path_to_ssl_key = path_to_ssl_key;
@@ -76,23 +78,27 @@ void Session::__doRead() {
 void Session::__onRead(beast::error_code ec, std::size_t bytes_transferred) 
 {
     boost::ignore_unused(bytes_transferred);
-
+    std::cerr << "__onRead" << std::endl;
     // This means they closed the connection
     if (ec == http::error::end_of_stream) { return __doClose(); }
-
+    std::cerr << "not end of stream" << std::endl;
     if (ec) 
-    { //return fail(ec, "read");
+    { 
         __is_live = false;
+        return fail(ec, "read");
+        //std::cout <<"error code = " << ec  << ", bytes = " << bytes_transferred<< std::endl;
+        //__is_live = false;
         return;
     }
     // Send the response
-    
+    std::cerr << "__analizeRequest" << std::endl;
     __analizeRequest();
 }
 void Session::__sendResponse(http::message_generator&& msg) {
     bool keep_alive = msg.keep_alive();
 
-    // Write the response
+    // Write the response<< 
+    std::cout << "Send Response" << std::endl;
     beast::async_write( __stream, std::move(msg),
                         beast::bind_front_handler( &Session::__onWrite, shared_from_this(), keep_alive));
 }
@@ -234,7 +240,7 @@ void Session::__analizeRequest()
         __request_marusia.station_ip = __ip_client;
         sp_sessions_marusia->at(__pos_worker_marusia)->startCommand(worker_server::Session::COMMAND_CODE_MARUSIA::MARUSIA_STATION_REQUEST, (void*)&__request_marusia,
             boost::bind(&Session::__callbackWorkerMarussia, this, _1));
-    }catch(std::exception &e){                ///!!! nens
+    }catch(std::exception &e){               
         std::cerr << __pos_worker_marusia << std::endl;
         Logger::writeLog("https_server Session", "__analizeRequest",Logger::log_message_t::ERROR, e.what());
         __callbackWorkerMarussia({{"target", "application_not_found"}});
@@ -276,6 +282,7 @@ void Session::__callbackWorkerMarussia(boost::json::value data) {
         Logger::writeLog("https_server Session", "__callbackWorkerMarussia",Logger::log_message_t::ERROR, std::string("[target analize]: ") + e.what());
         target = "error";
     };
+    std::cout <<"target " << target << std::endl; 
     /*------------*/
     if (target == "error") {
         response_data =
@@ -293,22 +300,32 @@ void Session::__callbackWorkerMarussia(boost::json::value data) {
             {"end_session", false}, //mb ne nado zakrivat
         };
     }
-
-    __constructResponse(response_data);
+    std::cerr << "start __constructResponse" << std::endl;
+    try{
+        __constructResponse(response_data, data.at("response").at("session").get_object());
+    }catch(std::exception &e){
+        Logger::writeLog("Session", "__callbackWorkerMarusia", Logger::log_message_t::ERROR, e.what());
+        std::cerr << "Session not found" <<std::endl;
+    }
 }
 
-void Session::__constructResponse(boost::json::object response_data) {
-
-    __body_response["response"] = response_data;
-
-    __body_response["session"] =
-    {
-        {"session_id", __body_request.at("session").at("session_id")},
-        {"user_id", __body_request.at("session").at("application").at("application_id")},
-        {"message_id", __body_request.at("session").at("message_id").as_int64()}
-    };
+void Session::__constructResponse(const boost::json::object& response_data,const boost::json::object& session) {
+    
+    try{
+        __body_response["response"] = response_data;
+        __body_response["session"] =
+        {
+            {"session_id", session.at("session_id")},
+            {"user_id", session.at("application").at("application_id")},
+            {"message_id", session.at("message_id").as_int64()}
+        };
+        
+    }catch(std::exception &e){
+        Logger::writeLog("Session", "__constructResponse", Logger::log_message_t::ERROR, e.what());
+        std::cerr <<"Session, __constructResponse: "<< e.what() << std::endl;
+    }
+    
     __body_response["version"] = "1.0";
-
     http::response<http::string_body> response{
         std::piecewise_construct,
             std::make_tuple(""),
@@ -322,7 +339,7 @@ void Session::__constructResponse(boost::json::object response_data) {
     __req = {};
     __body_response = {};
     __body_request = {};
-
+    std::cerr << "Construct response" << std::endl;
     __sendResponse((http::message<false, http::string_body, http::fields>)response);
 }
 
@@ -381,6 +398,7 @@ void Listener::__onAccept(beast::error_code ec, tcp::socket socket) {
         __sessions->push_back(std::make_shared<https_server::Session>(
                                 std::move(socket),
                                 __ssl_ctx,
+                                socket.local_endpoint().address().to_string(),
                                 __path_to_ssl_certificate,
                                 __path_to_ssl_key,
                                 __sessions_marussia));

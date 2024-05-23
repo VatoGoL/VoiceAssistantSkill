@@ -23,9 +23,7 @@ void ScheduleManager::init(const std::string& path_to_schedule)
 
     }else{
         __schedule_data = parser.release();
-        std::cerr <<boost::json::serialize(__schedule_data) << std::endl;
     }
-    
     
     parser.reset();
 }
